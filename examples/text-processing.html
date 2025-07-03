@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chrome AI SDK - Text Processing Examples</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .example {
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            background: #fafafa;
+        }
+        textarea {
+            width: 100%;
+            min-height: 120px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-family: inherit;
+            font-size: 14px;
+            resize: vertical;
+        }
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 10px;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .output {
+            background: white;
+            padding: 15px;
+            border-radius: 5px;
+            border: 1px solid #e0e0e0;
+            margin-top: 15px;
+            white-space: pre-wrap;
+        }
+        .loading {
+            color: #666;
+            font-style: italic;
+        }
+        .error {
+            color: #d32f2f;
+            background: #ffebee;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        select {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+            margin-left: 10px;
+        }
+        h3 {
+            margin-top: 0;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <h1>Chrome AI SDK - Text Processing Examples</h1>
+    <p>These examples demonstrate various text processing capabilities using Chrome's built-in AI.</p>
+
+    <div class="example">
+        <h3>📝 Text Summarization</h3>
+        <p>Paste or type a long text to get a concise summary.</p>
+        <textarea id="summaryInput" placeholder="Paste your long text here...">The history of artificial intelligence (AI) dates back to antiquity, with myths, stories, and rumors of artificial beings endowed with intelligence or consciousness by master craftsmen. The seeds of modern AI were planted by philosophers who attempted to describe the process of human thinking as the mechanical manipulation of symbols. This work culminated in the invention of the programmable digital computer in the 1940s, a machine based on the abstract essence of mathematical reasoning. This device and the ideas behind it inspired a handful of scientists to begin seriously discussing the possibility of building an electronic brain.
+
+The field of AI research was founded at a workshop held on the campus of Dartmouth College during the summer of 1956. Those who attended would become the leaders of AI research for decades. Many of them predicted that a machine as intelligent as a human being would exist in no more than a generation, and they were given millions of dollars to make this vision come true.
+
+Eventually, it became obvious that commercial developers and researchers had grossly underestimated the difficulty of the project. In 1974, in response to the criticism from James Lighthill and ongoing pressure from congress, the U.S. and British governments stopped funding undirected research into artificial intelligence, leading to years known as an "AI winter". Seven years later, a visionary initiative by the Japanese government inspired governments and industry to provide AI with billions of dollars, but by the late 1980s the investors became disillusioned and withdrew funding again.</textarea>
+        <label>
+            Summary length:
+            <select id="summaryLength">
+                <option value="brief">Brief (1-2 sentences)</option>
+                <option value="short" selected>Short (3-4 sentences)</option>
+                <option value="detailed">Detailed (paragraph)</option>
+            </select>
+        </label>
+        <button onclick="summarizeText()">Summarize</button>
+        <div id="summaryOutput" class="output">Summary will appear here...</div>
+    </div>
+
+    <div class="example">
+        <h3>🔍 Sentiment Analysis</h3>
+        <p>Analyze the sentiment and tone of any text.</p>
+        <textarea id="sentimentInput" placeholder="Enter text to analyze...">I absolutely loved the new restaurant! The food was amazing, the service was impeccable, and the atmosphere was perfect for a romantic dinner. Can't wait to go back!</textarea>
+        <button onclick="analyzeSentiment()">Analyze Sentiment</button>
+        <div id="sentimentOutput" class="output">Analysis will appear here...</div>
+    </div>
+
+    <div class="example">
+        <h3>🌐 Language Translation</h3>
+        <p>Translate text between different languages.</p>
+        <textarea id="translateInput" placeholder="Enter text to translate...">Hello, how are you today? I hope you're having a wonderful day!</textarea>
+        <label>
+            Translate to:
+            <select id="targetLanguage">
+                <option value="spanish">Spanish</option>
+                <option value="french">French</option>
+                <option value="german">German</option>
+                <option value="italian">Italian</option>
+                <option value="portuguese">Portuguese</option>
+                <option value="japanese">Japanese</option>
+                <option value="chinese">Chinese (Simplified)</option>
+                <option value="korean">Korean</option>
+            </select>
+        </label>
+        <button onclick="translateText()">Translate</button>
+        <div id="translateOutput" class="output">Translation will appear here...</div>
+    </div>
+
+    <div class="example">
+        <h3>✏️ Grammar and Style Correction</h3>
+        <p>Fix grammar mistakes and improve writing style.</p>
+        <textarea id="grammarInput" placeholder="Enter text with grammar mistakes...">their are many reason why people should excercise regular. first of all its good for you're health and make you feel more better. also it help with stress and can making you more happier person overall.</textarea>
+        <button onclick="correctGrammar()">Correct Grammar</button>
+        <div id="grammarOutput" class="output">Corrected text will appear here...</div>
+    </div>
+
+    <div class="example">
+        <h3>🎯 Keyword Extraction</h3>
+        <p>Extract main keywords and topics from any text.</p>
+        <textarea id="keywordInput" placeholder="Paste text to extract keywords from...">Machine learning is a subset of artificial intelligence that focuses on the development of algorithms and statistical models that enable computer systems to improve their performance on a specific task through experience. Unlike traditional programming where explicit instructions are provided, machine learning systems learn patterns from data and make decisions with minimal human intervention. The field encompasses various approaches including supervised learning, unsupervised learning, and reinforcement learning.</textarea>
+        <button onclick="extractKeywords()">Extract Keywords</button>
+        <div id="keywordOutput" class="output">Keywords will appear here...</div>
+    </div>
+
+    <script type="module">
+        import ChromeAI from '../dist/simple-chromium-ai.js';
+
+        window.summarizeText = async function() {
+            const text = document.getElementById('summaryInput').value;
+            const length = document.getElementById('summaryLength').value;
+            const output = document.getElementById('summaryOutput');
+            
+            if (!text.trim()) {
+                output.innerHTML = '<div class="error">Please enter some text to summarize.</div>';
+                return;
+            }
+            
+            output.innerHTML = '<div class="loading">Generating summary...</div>';
+            
+            const lengthInstructions = {
+                brief: "Summarize in 1-2 sentences only.",
+                short: "Summarize in 3-4 sentences.",
+                detailed: "Provide a detailed paragraph summary."
+            };
+            
+            try {
+                const response = await ChromeAI.singlePrompt(
+                    `Please summarize the following text. ${lengthInstructions[length]}\n\nText:\n${text}`,
+                    undefined,
+                    { temperature: 0.3 }
+                );
+                
+                if (response) {
+                    output.textContent = response;
+                } else {
+                    output.innerHTML = '<div class="error">Failed to generate summary. AI may not be available.</div>';
+                }
+            } catch (error) {
+                output.innerHTML = `<div class="error">Error: ${error.message}</div>`;
+            }
+        };
+
+        window.analyzeSentiment = async function() {
+            const text = document.getElementById('sentimentInput').value;
+            const output = document.getElementById('sentimentOutput');
+            
+            if (!text.trim()) {
+                output.innerHTML = '<div class="error">Please enter some text to analyze.</div>';
+                return;
+            }
+            
+            output.innerHTML = '<div class="loading">Analyzing sentiment...</div>';
+            
+            try {
+                const response = await ChromeAI.singlePrompt(
+                    `Analyze the sentiment of the following text. Provide:
+1. Overall sentiment (positive/negative/neutral)
+2. Sentiment score (1-10, where 1 is very negative and 10 is very positive)
+3. Key emotions detected
+4. Brief explanation
+
+Text: ${text}`,
+                    undefined,
+                    { temperature: 0.2 }
+                );
+                
+                if (response) {
+                    output.textContent = response;
+                } else {
+                    output.innerHTML = '<div class="error">Failed to analyze sentiment. AI may not be available.</div>';
+                }
+            } catch (error) {
+                output.innerHTML = `<div class="error">Error: ${error.message}</div>`;
+            }
+        };
+
+        window.translateText = async function() {
+            const text = document.getElementById('translateInput').value;
+            const targetLang = document.getElementById('targetLanguage').value;
+            const output = document.getElementById('translateOutput');
+            
+            if (!text.trim()) {
+                output.innerHTML = '<div class="error">Please enter some text to translate.</div>';
+                return;
+            }
+            
+            output.innerHTML = '<div class="loading">Translating...</div>';
+            
+            try {
+                const response = await ChromeAI.singlePrompt(
+                    `Translate the following text to ${targetLang}. Provide only the translation, no explanations.\n\nText: ${text}`,
+                    undefined,
+                    { temperature: 0.1 }
+                );
+                
+                if (response) {
+                    output.textContent = response;
+                } else {
+                    output.innerHTML = '<div class="error">Failed to translate. AI may not be available.</div>';
+                }
+            } catch (error) {
+                output.innerHTML = `<div class="error">Error: ${error.message}</div>`;
+            }
+        };
+
+        window.correctGrammar = async function() {
+            const text = document.getElementById('grammarInput').value;
+            const output = document.getElementById('grammarOutput');
+            
+            if (!text.trim()) {
+                output.innerHTML = '<div class="error">Please enter some text to correct.</div>';
+                return;
+            }
+            
+            output.innerHTML = '<div class="loading">Correcting grammar...</div>';
+            
+            try {
+                const response = await ChromeAI.singlePrompt(
+                    `Correct the grammar and improve the style of the following text. Provide the corrected version followed by a brief list of the main corrections made.\n\nText: ${text}`,
+                    undefined,
+                    { temperature: 0.2 }
+                );
+                
+                if (response) {
+                    output.textContent = response;
+                } else {
+                    output.innerHTML = '<div class="error">Failed to correct grammar. AI may not be available.</div>';
+                }
+            } catch (error) {
+                output.innerHTML = `<div class="error">Error: ${error.message}</div>`;
+            }
+        };
+
+        window.extractKeywords = async function() {
+            const text = document.getElementById('keywordInput').value;
+            const output = document.getElementById('keywordOutput');
+            
+            if (!text.trim()) {
+                output.innerHTML = '<div class="error">Please enter some text to analyze.</div>';
+                return;
+            }
+            
+            output.innerHTML = '<div class="loading">Extracting keywords...</div>';
+            
+            try {
+                const response = await ChromeAI.singlePrompt(
+                    `Extract the main keywords and topics from the following text. List them in order of importance and include a brief explanation of why each is significant.\n\nText: ${text}`,
+                    undefined,
+                    { temperature: 0.2 }
+                );
+                
+                if (response) {
+                    output.textContent = response;
+                } else {
+                    output.innerHTML = '<div class="error">Failed to extract keywords. AI may not be available.</div>';
+                }
+            } catch (error) {
+                output.innerHTML = `<div class="error">Error: ${error.message}</div>`;
+            }
+        };
+    </script>
+</body>
+</html>

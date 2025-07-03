@@ -1,0 +1,42 @@
+{
+	"name": "simple-chromium-ai",
+	"version": "0.3.0",
+	"description": "A lightweight, type-safe SDK for Chrome's built-in AI capabilities",
+	"main": "dist/index.js",
+	"types": "dist/index.d.ts",
+	"scripts": {
+		"build": "vite build && tsc --emitDeclarationOnly",
+		"check": "biome check --write .",
+		"lint": "biome lint --write .",
+		"format": "biome format --write ."
+	},
+	"keywords": [
+		"chrome-ai",
+		"chromium",
+		"ai",
+		"gemini-nano",
+		"language-model",
+		"sdk",
+		"typescript"
+	],
+	"author": "",
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/your-username/simple-chromium-ai.git"
+	},
+	"bugs": {
+		"url": "https://github.com/your-username/simple-chromium-ai/issues"
+	},
+	"homepage": "https://github.com/your-username/simple-chromium-ai#readme",
+	"dependencies": {
+		"@types/dom-chromium-ai": "0.0.9"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "2.0.6",
+		"@types/chrome": "0.0.329",
+		"@types/node": "^24.0.10",
+		"typescript": "5.8.3",
+		"vite": "7.0.1"
+	}
+}

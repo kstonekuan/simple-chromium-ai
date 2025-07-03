@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chrome AI SDK - Code Assistant Example</title>
+    <style>
+        body {
+            font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+            margin: 0;
+            padding: 20px;
+            background: #1e1e1e;
+            color: #d4d4d4;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            color: #569cd6;
+            margin-bottom: 30px;
+        }
+        
+        .code-section {
+            background: #252526;
+            border: 1px solid #464647;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .code-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .code-header h3 {
+            color: #4ec9b0;
+            margin: 0;
+        }
+        
+        .language-selector {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        
+        select {
+            background: #3c3c3c;
+            color: #cccccc;
+            border: 1px solid #464647;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-family: inherit;
+        }
+        
+        .code-editor {
+            background: #1e1e1e;
+            border: 1px solid #464647;
+            border-radius: 4px;
+            padding: 15px;
+            font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+            font-size: 14px;
+            color: #d4d4d4;
+            min-height: 200px;
+            white-space: pre-wrap;
+            overflow-x: auto;
+            resize: vertical;
+        }
+        
+        textarea.code-editor {
+            width: 100%;
+            box-sizing: border-box;
+            outline: none;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+        
+        button {
+            background: #0e639c;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            font-family: inherit;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        button:hover {
+            background: #1177bb;
+        }
+        
+        button:disabled {
+            background: #464647;
+            cursor: not-allowed;
+        }
+        
+        button.secondary {
+            background: #3c3c3c;
+            border: 1px solid #464647;
+        }
+        
+        button.secondary:hover {
+            background: #464647;
+        }
+        
+        .output-section {
+            margin-top: 20px;
+            padding: 15px;
+            background: #1e1e1e;
+            border: 1px solid #464647;
+            border-radius: 4px;
+            white-space: pre-wrap;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .output-section.error {
+            border-color: #f44747;
+            color: #f44747;
+        }
+        
+        .output-section.success {
+            border-color: #4ec9b0;
+        }
+        
+        .loading {
+            color: #569cd6;
+            font-style: italic;
+        }
+        
+        .examples-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .example-card {
+            background: #252526;
+            border: 1px solid #464647;
+            border-radius: 4px;
+            padding: 15px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        
+        .example-card:hover {
+            background: #2d2d30;
+        }
+        
+        .example-card h4 {
+            color: #569cd6;
+            margin: 0 0 10px 0;
+        }
+        
+        .example-card p {
+            color: #cccccc;
+            margin: 0;
+            font-size: 14px;
+        }
+        
+        /* Syntax highlighting colors */
+        .keyword { color: #569cd6; }
+        .string { color: #ce9178; }
+        .comment { color: #6a9955; }
+        .function { color: #dcdcaa; }
+        .number { color: #b5cea8; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🤖 AI Code Assistant</h1>
+        
+        <div class="code-section">
+            <div class="code-header">
+                <h3>Code Input</h3>
+                <div class="language-selector">
+                    <label for="language">Language:</label>
+                    <select id="language">
+                        <option value="javascript">JavaScript</option>
+                        <option value="typescript">TypeScript</option>
+                        <option value="python">Python</option>
+                        <option value="java">Java</option>
+                        <option value="cpp">C++</option>
+                        <option value="html">HTML/CSS</option>
+                        <option value="sql">SQL</option>
+                    </select>
+                </div>
+            </div>
+            
+            <textarea id="codeInput" class="code-editor" placeholder="// Paste or write your code here...">function fibonacci(n) {
+    if (n <= 1) return n;
+    return fibonacci(n - 1) + fibonacci(n - 2);
+}</textarea>
+            
+            <div class="action-buttons">
+                <button onclick="explainCode()">
+                    <span>💡</span> Explain Code
+                </button>
+                <button onclick="improveCode()">
+                    <span>✨</span> Improve Code
+                </button>
+                <button onclick="findBugs()">
+                    <span>🐛</span> Find Bugs
+                </button>
+                <button onclick="addComments()">
+                    <span>📝</span> Add Comments
+                </button>
+                <button onclick="convertCode()">
+                    <span>🔄</span> Convert to TypeScript
+                </button>
+                <button onclick="generateTests()">
+                    <span>🧪</span> Generate Tests
+                </button>
+                <button onclick="optimizePerformance()">
+                    <span>⚡</span> Optimize Performance
+                </button>
+                <button onclick="generateDocs()">
+                    <span>📚</span> Generate Docs
+                </button>
+            </div>
+        </div>
+        
+        <div class="code-section">
+            <h3>Quick Examples</h3>
+            <div class="examples-grid">
+                <div class="example-card" onclick="loadExample('sorting')">
+                    <h4>Sorting Algorithm</h4>
+                    <p>Bubble sort implementation that needs optimization</p>
+                </div>
+                <div class="example-card" onclick="loadExample('api')">
+                    <h4>API Handler</h4>
+                    <p>Express.js route with potential security issues</p>
+                </div>
+                <div class="example-card" onclick="loadExample('react')">
+                    <h4>React Component</h4>
+                    <p>Component with performance issues</p>
+                </div>
+                <div class="example-card" onclick="loadExample('sql')">
+                    <h4>SQL Query</h4>
+                    <p>Complex query that needs optimization</p>
+                </div>
+            </div>
+        </div>
+        
+        <div id="output" class="output-section" style="display: none;">
+            <div id="outputContent"></div>
+        </div>
+    </div>
+
+    <script type="module">
+        import ChromeAI from '../dist/simple-chromium-ai.js';
+        
+        const examples = {
+            sorting: {
+                language: 'javascript',
+                code: `function bubbleSort(arr) {
+    for (let i = 0; i < arr.length; i++) {
+        for (let j = 0; j < arr.length - 1; j++) {
+            if (arr[j] > arr[j + 1]) {
+                let temp = arr[j];
+                arr[j] = arr[j + 1];
+                arr[j + 1] = temp;
+            }
+        }
+    }
+    return arr;
+}`
+            },
+            api: {
+                language: 'javascript',
+                code: `app.post('/api/users', (req, res) => {
+    const { username, password, email } = req.body;
+    
+    const query = \`INSERT INTO users (username, password, email) 
+                   VALUES ('\${username}', '\${password}', '\${email}')\`;
+    
+    db.query(query, (err, result) => {
+        if (err) {
+            res.status(500).send('Error creating user');
+        } else {
+            res.send('User created successfully');
+        }
+    });
+});`
+            },
+            react: {
+                language: 'javascript',
+                code: `function TodoList({ todos }) {
+    const [filter, setFilter] = useState('all');
+    
+    const filteredTodos = todos.filter(todo => {
+        if (filter === 'completed') return todo.completed;
+        if (filter === 'active') return !todo.completed;
+        return true;
+    });
+    
+    const completedCount = todos.filter(t => t.completed).length;
+    
+    return (
+        <div>
+            {filteredTodos.map((todo, index) => (
+                <div key={index}>
+                    <input type="checkbox" checked={todo.completed} />
+                    {todo.text}
+                </div>
+            ))}
+            <p>Completed: {completedCount}</p>
+        </div>
+    );
+}`
+            },
+            sql: {
+                language: 'sql',
+                code: `SELECT c.customer_name, o.order_id, o.order_date, 
+       p.product_name, oi.quantity, oi.price
+FROM customers c, orders o, order_items oi, products p
+WHERE c.customer_id = o.customer_id 
+  AND o.order_id = oi.order_id 
+  AND oi.product_id = p.product_id
+  AND o.order_date > '2023-01-01'
+  AND c.country = 'USA'
+ORDER BY o.order_date DESC;`
+            }
+        };
+
+        async function showOutput(content, isError = false) {
+            const output = document.getElementById('output');
+            const outputContent = document.getElementById('outputContent');
+            
+            output.style.display = 'block';
+            output.className = `output-section ${isError ? 'error' : 'success'}`;
+            outputContent.textContent = content;
+        }
+
+        async function showLoading() {
+            const output = document.getElementById('output');
+            const outputContent = document.getElementById('outputContent');
+            
+            output.style.display = 'block';
+            output.className = 'output-section';
+            outputContent.innerHTML = '<div class="loading">AI is analyzing your code...</div>';
+        }
+
+        window.loadExample = function(exampleName) {
+            const example = examples[exampleName];
+            if (example) {
+                document.getElementById('codeInput').value = example.code;
+                document.getElementById('language').value = example.language;
+            }
+        };
+
+        window.explainCode = async function() {
+            const code = document.getElementById('codeInput').value;
+            const language = document.getElementById('language').value;
+            
+            if (!code.trim()) {
+                showOutput('Please enter some code to analyze.', true);
+                return;
+            }
+            
+            showLoading();
+            
+            try {
+                const response = await ChromeAI.singlePrompt(
+                    `Explain this ${language} code in detail. Include:
+1. What the code does
+2. How it works step by step
+3. Any important concepts used
+4. Potential use cases
+
+Code:
+\`\`\`${language}
+${code}
+\`\`\``,
+                    undefined,
+                    { temperature: 0.3 }
+                );
+                
+                if (response) {
+                    showOutput(response);
+                } else {
+                    showOutput('Failed to analyze code. AI may not be available.', true);
+                }
+            } catch (error) {
+                showOutput(`Error: ${error.message}`, true);
+            }
+        };
+
+        window.improveCode = async function() {
+            const code = document.getElementById('codeInput').value;
+            const language = document.getElementById('language').value;
+            
+            if (!code.trim()) {
+                showOutput('Please enter some code to improve.', true);
+                return;
+            }
+            
+            showLoading();
+            
+            try {
+                const response = await ChromeAI.singlePrompt(
+                    `Improve this ${language} code by:
+1. Following best practices
+2. Improving readability
+3. Adding error handling where needed
+4. Optimizing where possible
+
+Provide the improved code and explain the changes made.
+
+Original code:
+\`\`\`${language}
+${code}
+\`\`\``,
+                    undefined,
+                    { temperature: 0.2 }
+                );
+                
+                if (response) {
+                    showOutput(response);
+                } else {
+                    showOutput('Failed to improve code. AI may not be available.', true);
+                }
+            } catch (error) {
+                showOutput(`Error: ${error.message}`, true);
+            }
+        };
+
+        window.findBugs = async function() {
+            const code = document.getElementById('codeInput').value;
+            const language = document.getElementById('language').value;
+            
+            if (!code.trim()) {
+                showOutput('Please enter some code to analyze for bugs.', true);
+                return;
+            }
+            
+            showLoading();
+            
+            try {
+                const response = await ChromeAI.singlePrompt(
+                    `Analyze this ${language} code for bugs, issues, and potential problems:
+1. Logic errors
+2. Security vulnerabilities
+3. Performance issues
+4. Edge cases not handled
+5. Memory leaks or resource management issues
+
+Code:
+\`\`\`${language}
+${code}
+\`\`\`
+
+List each issue found with severity (High/Medium/Low) and suggested fixes.`,
+                    undefined,
+                    { temperature: 0.1 }
+                );
+                
+                if (response) {
+                    showOutput(response);
+                } else {
+                    showOutput('Failed to analyze code. AI may not be available.', true);
+                }
+            } catch (error) {
+                showOutput(`Error: ${error.message}`, true);
+            }
+        };
+
+        window.addComments = async function() {
+            const code = document.getElementById('codeInput').value;
+            const language = document.getElementById('language').value;
+            
+            if (!code.trim()) {
+                showOutput('Please enter some code to add comments to.', true);
+                return;
+            }
+            
+            showLoading();
+            
+            try {
+                const response = await ChromeAI.singlePrompt(
+                    `Add comprehensive comments to this ${language} code:
+1. Add a header comment explaining the overall purpose
+2. Add inline comments for complex logic
+3. Document parameters and return values
+4. Explain any algorithms or patterns used
+
+Return the fully commented code.
+
+Code:
+\`\`\`${language}
+${code}
+\`\`\``,
+                    undefined,
+                    { temperature: 0.2 }
+                );
+                
+                if (response) {
+                    showOutput(response);
+                } else {
+                    showOutput('Failed to add comments. AI may not be available.', true);
+                }
+            } catch (error) {
+                showOutput(`Error: ${error.message}`, true);
+            }
+        };
+
+        window.convertCode = async function() {
+            const code = document.getElementById('codeInput').value;
+            const fromLang = document.getElementById('language').value;
+            const toLang = fromLang === 'javascript' ? 'typescript' : 'javascript';
+            
+            if (!code.trim()) {
+                showOutput('Please enter some code to convert.', true);
+                return;
+            }
+            
+            showLoading();
+            
+            try {
+                const response = await ChromeAI.singlePrompt(
+                    `Convert this ${fromLang} code to ${toLang}:
+1. Add proper type annotations (if converting to TypeScript)
+2. Use modern syntax and best practices
+3. Preserve all functionality
+4. Include any necessary imports or type definitions
+
+Code:
+\`\`\`${fromLang}
+${code}
+\`\`\`
+
+Provide the converted code and explain any significant changes.`,
+                    undefined,
+                    { temperature: 0.1 }
+                );
+                
+                if (response) {
+                    showOutput(response);
+                } else {
+                    showOutput('Failed to convert code. AI may not be available.', true);
+                }
+            } catch (error) {
+                showOutput(`Error: ${error.message}`, true);
+            }
+        };
+
+        window.generateTests = async function() {
+            const code = document.getElementById('codeInput').value;
+            const language = document.getElementById('language').value;
+            
+            if (!code.trim()) {
+                showOutput('Please enter some code to generate tests for.', true);
+                return;
+            }
+            
+            showLoading();
+            
+            try {
+                const response = await ChromeAI.singlePrompt(
+                    `Generate comprehensive unit tests for this ${language} code:
+1. Test normal cases
+2. Test edge cases
+3. Test error conditions
+4. Use appropriate testing framework (Jest for JS, pytest for Python, etc.)
+5. Include test descriptions
+
+Code:
+\`\`\`${language}
+${code}
+\`\`\``,
+                    undefined,
+                    { temperature: 0.2 }
+                );
+                
+                if (response) {
+                    showOutput(response);
+                } else {
+                    showOutput('Failed to generate tests. AI may not be available.', true);
+                }
+            } catch (error) {
+                showOutput(`Error: ${error.message}`, true);
+            }
+        };
+
+        window.optimizePerformance = async function() {
+            const code = document.getElementById('codeInput').value;
+            const language = document.getElementById('language').value;
+            
+            if (!code.trim()) {
+                showOutput('Please enter some code to optimize.', true);
+                return;
+            }
+            
+            showLoading();
+            
+            try {
+                const response = await ChromeAI.singlePrompt(
+                    `Optimize this ${language} code for better performance:
+1. Identify performance bottlenecks
+2. Suggest algorithmic improvements
+3. Reduce time and space complexity where possible
+4. Use language-specific optimizations
+5. Maintain readability while optimizing
+
+Code:
+\`\`\`${language}
+${code}
+\`\`\`
+
+Provide the optimized code and explain the performance improvements with complexity analysis.`,
+                    undefined,
+                    { temperature: 0.2 }
+                );
+                
+                if (response) {
+                    showOutput(response);
+                } else {
+                    showOutput('Failed to optimize code. AI may not be available.', true);
+                }
+            } catch (error) {
+                showOutput(`Error: ${error.message}`, true);
+            }
+        };
+
+        window.generateDocs = async function() {
+            const code = document.getElementById('codeInput').value;
+            const language = document.getElementById('language').value;
+            
+            if (!code.trim()) {
+                showOutput('Please enter some code to document.', true);
+                return;
+            }
+            
+            showLoading();
+            
+            try {
+                const response = await ChromeAI.singlePrompt(
+                    `Generate comprehensive documentation for this ${language} code:
+1. API documentation with proper format (JSDoc, docstrings, etc.)
+2. Usage examples
+3. Parameter descriptions
+4. Return value descriptions
+5. Any exceptions or errors that might be thrown
+6. Brief implementation notes if helpful
+
+Code:
+\`\`\`${language}
+${code}
+\`\`\``,
+                    undefined,
+                    { temperature: 0.2 }
+                );
+                
+                if (response) {
+                    showOutput(response);
+                } else {
+                    showOutput('Failed to generate documentation. AI may not be available.', true);
+                }
+            } catch (error) {
+                showOutput(`Error: ${error.message}`, true);
+            }
+        };
+    </script>
+</body>
+</html>
