@@ -5,7 +5,7 @@
 	"main": "dist/index.js",
 	"types": "dist/index.d.ts",
 	"scripts": {
-		"build": "vite build && tsc --emitDeclarationOnly",
+		"build": "vite build",
 		"check": "biome check --write .",
 		"lint": "biome lint --write .",
 		"format": "biome format --write ."
@@ -37,6 +37,7 @@
 		"@types/chrome": "0.0.329",
 		"@types/node": "^24.0.10",
 		"typescript": "5.8.3",
-		"vite": "7.0.1"
+		"vite": "7.0.1",
+		"vite-plugin-dts": "^4.5.4"
 	}
 }
