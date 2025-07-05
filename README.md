@@ -189,8 +189,9 @@ const response = await ChromiumAI.prompt(
     return "Write a short story instead";
   },
   async (error, context) => {
-    // Called on timeout - retry once
-    return context.originalPrompt;
+    // Called on timeout
+    console.log(`Timed out after ${context.timeoutMs}ms`);
+    throw error; // Propagate the timeout error
   }
 );
 ```
@@ -433,16 +434,16 @@ const response = await ChromiumAI.prompt(
     console.log(`Prompt too long: ${context.tokenCount} tokens`);
     console.log(`Max allowed: ${context.maxTokens}`);
     
-    // Automatically shorten the prompt
+    // Return a shorter prompt
     const shortened = context.originalPrompt.slice(0, 1000) + "...";
-    console.log("Retrying with shorter prompt");
+    console.log("Using shorter prompt");
     return shortened;
   },
   async (error, context) => {
     // onTimeout callback
-    console.log(`Timeout after ${context.timeoutMs}ms, retrying...`);
-    // Retry the same prompt
-    return context.originalPrompt;
+    console.log(`Timeout after ${context.timeoutMs}ms`);
+    // Re-throw to propagate the error
+    throw error;
   }
 );
 ```
