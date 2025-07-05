@@ -1,410 +1,706 @@
 /// <reference types="@types/dom-chromium-ai" />
 
+import { err, ok, type Result, ResultAsync } from "neverthrow";
+
+// Re-export Result types for users who want them
+export { err, ok, Result, ResultAsync } from "neverthrow";
+
 /**
- * Custom error class for Chrome AI SDK errors
+ * Context provided to the onInputTooLong callback
  */
-export class ChromeAIError extends Error {
-	constructor(
-		message: string,
-		public code:
-			| "UNAVAILABLE"
-			| "DOWNLOAD_FAILED"
-			| "SESSION_FAILED"
-			| "PROMPT_FAILED"
-			| "TIMEOUT",
-	) {
-		super(message);
-		this.name = "ChromeAIError";
-	}
+export interface InputTooLongContext {
+	tokenCount: number;
+	maxTokens: number;
+	tokensSoFar: number;
+	originalPrompt: string;
 }
 
 /**
- * Represents an initialized Chrome AI instance with a configured system prompt.
+ * Context provided to the onTimeout callback
+ */
+export interface TimeoutContext {
+	timeoutMs: number;
+	originalPrompt: string;
+}
+
+/**
+ * Represents an initialized Chromium AI instance with a configured system prompt.
  * This object must be passed to all other SDK functions to ensure proper initialization.
  */
-export interface ChromeAIInstance {
+export interface ChromiumAIInstance {
 	/** The system prompt that will be used for all sessions created from this instance */
 	readonly systemPrompt?: string;
 	/** Unique identifier for this instance */
 	readonly instanceId: string;
 }
 
-/**
- * Initializes Chrome AI and returns an instance object that must be used with all other functions.
- * This pattern ensures that the AI is properly initialized before use through TypeScript's type system.
- *
- * @param systemPrompt Optional system prompt that will be used for all sessions
- * @param onDownloadProgress Optional callback for download progress
- * @returns A ChromeAIInstance object or null if unavailable
- *
- * @example
- * // Basic initialization
- * const ai = await initializeChromeAI();
- * if (!ai) {
- *   console.error("Chrome AI is not available");
- *   return;
- * }
- *
- * // Now you can use the ai instance with other functions
- * const response = await singlePrompt(ai, "Hello!");
- *
- * @example
- * // With system prompt for consistent behavior
- * const ai = await initializeChromeAI(
- *   "You are a helpful assistant that provides concise answers."
- * );
- *
- * @example
- * // With download progress monitoring
- * const ai = await initializeChromeAI(
- *   undefined,
- *   (progress) => console.log(`Downloading: ${progress}%`)
- * );
- */
-export async function initializeChromeAI(
-	systemPrompt?: string,
-	onDownloadProgress?: (progress: number) => void,
-): Promise<ChromeAIInstance | null> {
-	// Check if API exists
-	if (typeof LanguageModel === "undefined") {
-		const error = new ChromeAIError(
-			"Chrome AI API is not available. Please ensure you're using Chrome 127+ or Edge 127+ with AI features enabled. See README for setup instructions.",
-			"UNAVAILABLE",
-		);
-		console.error(error.message);
-		return null;
-	}
-
-	// Check current availability
-	let availability: Availability;
-	try {
-		availability = await LanguageModel.availability();
-	} catch (error) {
-		const aiError = new ChromeAIError(
-			"Failed to check Chrome AI availability. The API may not be properly initialized.",
-			"UNAVAILABLE",
-		);
-		console.error(aiError.message, error);
-		return null;
-	}
-
-	if (availability === "unavailable") {
-		const error = new ChromeAIError(
-			"Chrome AI is not available on this device. This may be due to hardware limitations or missing components.",
-			"UNAVAILABLE",
-		);
-		console.error(error.message);
-		return null;
-	}
-
-	// If already available, return immediately
-	if (availability === "available") {
-		return {
-			systemPrompt,
-			instanceId: crypto.randomUUID(),
-		};
-	}
-
-	// Trigger download by creating a temporary session
-	try {
-		const tempSession = await LanguageModel.create({
-			monitor: onDownloadProgress
-				? (m) => {
-						m.addEventListener("downloadprogress", (e) => {
-							onDownloadProgress(Math.round(e.loaded * 100));
-						});
-					}
-				: undefined,
-		});
-
-		// Clean up the temporary session
-		tempSession.destroy();
-
-		// Verify it's now available
-		try {
-			const finalStatus = await LanguageModel.availability();
-			if (finalStatus === "available") {
-				return {
-					systemPrompt,
-					instanceId: crypto.randomUUID(),
-				};
-			}
-		} catch (error) {
-			const aiError = new ChromeAIError(
-				"Failed to verify model availability after download.",
-				"DOWNLOAD_FAILED",
-			);
-			console.error(aiError.message, error);
-		}
-
-		const downloadError = new ChromeAIError(
-			"AI model download failed. Please check your internet connection and try again.",
-			"DOWNLOAD_FAILED",
-		);
-		console.error(downloadError.message);
-		return null;
-	} catch (error) {
-		const aiError = new ChromeAIError(
-			`Failed to download AI model: ${error instanceof Error ? error.message : "Unknown error"}`,
-			"DOWNLOAD_FAILED",
-		);
-		console.error(aiError.message, error);
-		return null;
-	}
+function okOrThrow<T, E>(result: Result<T, E>): T {
+	return result.match(
+		(ok) => ok,
+		(err) => {
+			throw err;
+		},
+	);
 }
 
 /**
- * Performs a single prompt using the initialized Chrome AI instance.
- * The instance ensures the AI is properly initialized before use.
+ * Initializes Chromium AI and returns an instance object wrapped in a Result.
+ * This is the safe version that returns a Result instead of throwing.
  *
- * @param instance The initialized Chrome AI instance from initializeChromeAI()
+ * @param systemPrompt Optional system prompt that will be used for all sessions
+ * @param onDownloadProgress Optional callback for download progress
+ * @returns A Result containing either a ChromiumAIInstance or an Error
+ *
+ * @example
+ * // Using Result type
+ * const result = await initializeSafe();
+ * result.match(
+ *   ai => console.log("Initialized successfully"),
+ *   error => console.error("Failed:", error.message)
+ * );
+ *
+ * @example
+ * // With system prompt and chaining
+ * await initializeSafe("You are a helpful assistant")
+ *   .andThen(ai => promptSafe(ai, "Hello"))
+ *   .match(
+ *     response => console.log(response),
+ *     error => console.error(error)
+ *   );
+ */
+export function initializeSafe(
+	systemPrompt?: string,
+	onDownloadProgress?: (progress: number) => void,
+): ResultAsync<ChromiumAIInstance, Error> {
+	return new ResultAsync(
+		(async () => {
+			// Check if API exists
+			if (typeof LanguageModel === "undefined") {
+				return err(
+					new Error(
+						"Chromium AI API is not available. Please ensure you're using Chrome 127+ or Edge 127+ with AI features enabled. See README for setup instructions.",
+					),
+				);
+			}
+
+			// Check current availability
+			try {
+				const availability = await LanguageModel.availability();
+
+				if (availability === "unavailable") {
+					return err(
+						new Error(
+							"Chromium AI is not available on this device. This may be due to hardware limitations or missing components.",
+						),
+					);
+				}
+
+				// If already available, return immediately
+				if (availability === "available") {
+					return ok({
+						systemPrompt,
+						instanceId: crypto.randomUUID(),
+					});
+				}
+
+				// Trigger download by creating a temporary session
+				try {
+					const tempSession = await LanguageModel.create({
+						monitor: onDownloadProgress
+							? (m) => {
+									m.addEventListener("downloadprogress", (e) => {
+										onDownloadProgress(Math.round(e.loaded * 100));
+									});
+								}
+							: undefined,
+					});
+
+					// Clean up the temporary session
+					tempSession.destroy();
+
+					// Verify it's now available
+					const finalStatus = await LanguageModel.availability();
+					if (finalStatus === "available") {
+						return ok({
+							systemPrompt,
+							instanceId: crypto.randomUUID(),
+						});
+					}
+
+					return err(
+						new Error(
+							"AI model download failed. Please check your internet connection and try again.",
+						),
+					);
+				} catch (error) {
+					return err(
+						new Error(
+							`Failed to download AI model: ${error instanceof Error ? error.message : "Unknown error"}`,
+						),
+					);
+				}
+			} catch (_error) {
+				return err(
+					new Error(
+						"Failed to check Chromium AI availability. The API may not be properly initialized.",
+					),
+				);
+			}
+		})(),
+	);
+}
+
+/**
+ * Initializes Chromium AI and returns an instance object that must be used with all other functions.
+ * This is the default version that throws errors instead of returning Result types.
+ * 
+ * @see {@link initializeSafe} for the safe version that returns Result types
+ * @returns A ChromiumAIInstance object
+ * @throws {Error} If initialization fails
+ * 
+ * @example
+ * const ai = await initialize("You are a helpful assistant");
+ */
+export async function initialize(
+	systemPrompt?: string,
+	onDownloadProgress?: (progress: number) => void,
+): Promise<ChromiumAIInstance> {
+	const result = await initializeSafe(systemPrompt, onDownloadProgress);
+	return okOrThrow(result);
+}
+
+export type PromptResult = ResultAsync<string, Error>;
+
+/**
+ * Performs a single prompt using the initialized Chromium AI instance.
+ * This is the safe version that returns a Result instead of throwing.
+ *
+ * @param instance The initialized Chromium AI instance
  * @param prompt The user's prompt
  * @param timeout Optional timeout in milliseconds
  * @param promptOptions Options for the prompt (signal, etc)
  * @param sessionOptions Additional session options (merged with instance system prompt)
- * @returns The AI's response, or null if failed
+ * @param checkInputLimitBeforeSending Check if the prompt exceeds token limits before sending
+ * @param recoveryCallbacks Optional callbacks for handling recoverable errors
+ * @returns A Result containing either the AI's response or an Error
  *
  * @example
- * // Basic usage
- * const ai = await initializeChromeAI("You are a helpful assistant");
- * if (ai) {
- *   const response = await singlePrompt(ai, "What is TypeScript?");
- *   console.log(response);
+ * // Using Result type
+ * const result = await promptSafe(ai, "What is TypeScript?");
+ * if (result.isOk()) {
+ *   console.log(result.value);
  * }
  *
  * @example
- * // With timeout
- * const ai = await initializeChromeAI();
- * if (ai) {
- *   const response = await singlePrompt(ai, "Write a story", 5000);
- *   if (!response) {
- *     console.log("Request timed out");
+ * // With token limit checking
+ * const result = await promptSafe(
+ *   ai,
+ *   "Very long prompt...",
+ *   undefined,
+ *   undefined,
+ *   undefined,
+ *   true // checkInputLimitBeforeSending
+ * );
+ * if (result.isErr()) {
+ *   console.log(`Error: ${result.error.message}`);
+ * }
+ *
+ * @example
+ * // With chaining
+ * await promptSafe(ai, "Tell me a joke")
+ *   .map(response => response.toUpperCase())
+ *   .match(
+ *     joke => console.log(joke),
+ *     error => console.error(error)
+ *   );
+ *
+ * @example
+ * // With recovery callbacks
+ * await promptSafe(
+ *   ai,
+ *   "Very long prompt...",
+ *   5000,
+ *   undefined,
+ *   undefined,
+ *   true,
+ *   {
+ *     onInputTooLong: async (error, context) => {
+ *       // Automatically retry with a shorter version
+ *       return context.originalPrompt.slice(0, 100) + "...";
+ *     },
+ *     onTimeout: async (error, context) => {
+ *       // Retry once on timeout
+ *       return context.originalPrompt;
+ *     }
  *   }
- * }
- *
- * @example
- * // With custom cancellation
- * const controller = new AbortController();
- * const response = await singlePrompt(
- *   ai,
- *   "Write a long story",
- *   undefined,
- *   { signal: controller.signal }
- * );
- * // Cancel with: controller.abort()
- *
- * @example
- * // With both timeout and custom cancellation (both will work)
- * const controller = new AbortController();
- * const response = await singlePrompt(
- *   ai,
- *   "Complex task",
- *   10000, // 10 second timeout
- *   { signal: controller.signal } // Can still manually abort before timeout
- * );
- *
- * @example
- * // With session options
- * const response = await singlePrompt(
- *   ai,
- *   "Be creative",
- *   undefined,
- *   undefined,
- *   { temperature: 0.8, topK: 40 }
- * );
- *
- * @example
- * // With timeout and options
- * const response = await singlePrompt(
- *   ai,
- *   "Quick summary",
- *   3000,
- *   undefined,
- *   { temperature: 0.3 }
+ * ).match(
+ *   response => console.log("Success:", response),
+ *   error => console.error("Final error:", error.message)
  * );
  */
-export async function singlePrompt(
-	instance: ChromeAIInstance,
+export function promptSafe(
+	instance: ChromiumAIInstance,
 	prompt: string,
 	timeout?: number,
 	promptOptions?: LanguageModelPromptOptions,
 	sessionOptions?: LanguageModelCreateOptions,
-): Promise<string | null> {
-	let session: LanguageModel | null = null;
-	let timeoutId: NodeJS.Timeout | null = null;
+	checkInputLimitBeforeSending?: boolean,
+	/** Called when the input prompt is too long. Return a shorter prompt to retry. */
+	onInputTooLong?: (err: Error, context: InputTooLongContext) => PromptResult,
+	/** Called when the request times out. Return the prompt to retry. */
+	onTimeout?: (err: Error, context: TimeoutContext) => PromptResult,
+): PromptResult {
+	return new ResultAsync(
+		(async () => {
+			const currentPrompt = prompt;
+			let attempts = 0;
+			const maxAttempts = 3; // Prevent infinite loops
 
-	try {
-		// Handle abort signals - combine timeout and user-provided signal if both exist
-		let finalPromptOptions = promptOptions || {};
-		if (timeout || finalPromptOptions.signal) {
-			const signals: AbortSignal[] = [];
-			
-			// Add user-provided signal if it exists
-			if (finalPromptOptions.signal) {
-				signals.push(finalPromptOptions.signal);
-			}
-			
-			// Add timeout signal if timeout is specified
-			if (timeout) {
-				const timeoutController = new AbortController();
-				signals.push(timeoutController.signal);
-				timeoutId = setTimeout(() => timeoutController.abort(), timeout);
-			}
-			
-			// Combine signals using AbortSignal.any() if available, otherwise use the single signal
-			if (signals.length > 1 && AbortSignal.any) {
-				finalPromptOptions = { ...finalPromptOptions, signal: AbortSignal.any(signals) };
-			} else if (signals.length === 1) {
-				finalPromptOptions = { ...finalPromptOptions, signal: signals[0] };
-			}
-		}
+			while (attempts < maxAttempts) {
+				attempts++;
+				let session: LanguageModel | null = null;
+				let timeoutId: NodeJS.Timeout | null = null;
 
-		// Merge instance system prompt with session options
-		const mergedOptions: LanguageModelCreateOptions = {
-			...sessionOptions,
-		};
+				try {
+					// Handle abort signals - combine timeout and user-provided signal if both exist
+					let finalPromptOptions = promptOptions || {};
+					if (timeout || finalPromptOptions.signal) {
+						const signals: AbortSignal[] = [];
 
-		if (instance.systemPrompt) {
-			const systemMessage: LanguageModelSystemMessage = {
-				role: "system" as LanguageModelSystemMessageRole,
-				content: instance.systemPrompt,
-			};
-			
-			// Always use our system message as the first prompt
-			mergedOptions.initialPrompts = [systemMessage];
-			
-			// If session options has initial prompts, append non-system messages
-			if (sessionOptions?.initialPrompts && sessionOptions.initialPrompts.length > 0) {
-				// Skip the first (system) message from sessionOptions and add the rest
-				const nonSystemMessages = sessionOptions.initialPrompts.slice(1) as LanguageModelMessage[];
-				if (nonSystemMessages.length > 0) {
-					mergedOptions.initialPrompts = [systemMessage, ...nonSystemMessages];
+						// Add user-provided signal if it exists
+						if (finalPromptOptions.signal) {
+							signals.push(finalPromptOptions.signal);
+						}
+
+						// Add timeout signal if timeout is specified
+						if (timeout) {
+							const timeoutController = new AbortController();
+							signals.push(timeoutController.signal);
+							timeoutId = setTimeout(() => timeoutController.abort(), timeout);
+						}
+
+						// Combine signals using AbortSignal.any() if available, otherwise use the single signal
+						if (signals.length > 1 && AbortSignal.any) {
+							finalPromptOptions = {
+								...finalPromptOptions,
+								signal: AbortSignal.any(signals),
+							};
+						} else if (signals.length === 1) {
+							finalPromptOptions = {
+								...finalPromptOptions,
+								signal: signals[0],
+							};
+						}
+					}
+
+					// Merge instance system prompt with session options
+					const mergedOptions: LanguageModelCreateOptions = {
+						...sessionOptions,
+					};
+
+					if (instance.systemPrompt) {
+						const systemMessage: LanguageModelSystemMessage = {
+							role: "system" as LanguageModelSystemMessageRole,
+							content: instance.systemPrompt,
+						};
+
+						// Always use our system message as the first prompt
+						mergedOptions.initialPrompts = [systemMessage];
+
+						// If session options has initial prompts, append non-system messages
+						if (
+							sessionOptions?.initialPrompts &&
+							sessionOptions.initialPrompts.length > 0
+						) {
+							// Skip the first (system) message from sessionOptions and add the rest
+							const nonSystemMessages = sessionOptions.initialPrompts.slice(
+								1,
+							) as LanguageModelMessage[];
+							if (nonSystemMessages.length > 0) {
+								mergedOptions.initialPrompts = [
+									systemMessage,
+									...nonSystemMessages,
+								];
+							}
+						}
+					} else if (sessionOptions?.initialPrompts) {
+						// No instance system prompt, use session options as is
+						mergedOptions.initialPrompts = sessionOptions.initialPrompts;
+					}
+
+					// Create session
+					session = await LanguageModel.create(mergedOptions);
+
+					// Check token limits if requested
+					if (checkInputLimitBeforeSending) {
+						try {
+							// Based on the Chromium AI API docs, we need to count tokens
+							// The actual method names might be different in the types
+							const promptTokens =
+								await session.measureInputUsage(currentPrompt);
+
+							if (promptTokens !== undefined) {
+								// Get the context window size and current usage
+								const maxTokens = session.inputQuota;
+								const tokensSoFar = session.inputUsage;
+
+								if (maxTokens && promptTokens > maxTokens - tokensSoFar) {
+									const error = new Error(
+										`Prompt exceeds available token limit: ${promptTokens} tokens needed, but only ${maxTokens - tokensSoFar} available (max: ${maxTokens}, used: ${tokensSoFar})`,
+									);
+									// Try recovery callback if available
+									if (onInputTooLong) {
+										const context: InputTooLongContext = {
+											tokenCount: promptTokens,
+											maxTokens,
+											tokensSoFar,
+											originalPrompt: prompt,
+										};
+										return onInputTooLong(error, context);
+									}
+									// No recovery or recovery failed
+									return err(error);
+								}
+							} else {
+								console.warn(
+									"Token counting not available in this Chromium AI version",
+								);
+							}
+						} catch (tokenCheckError) {
+							// If token checking fails, log it but continue
+							console.warn("Failed to check token count:", tokenCheckError);
+						}
+					}
+
+					// Send prompt and return response
+					const response = await session.prompt(
+						currentPrompt,
+						finalPromptOptions,
+					);
+					return ok(response);
+				} catch (error) {
+					if (error instanceof DOMException && error.name === "AbortError") {
+						// Try recovery callback if available
+						if (onTimeout && timeout) {
+							const timeoutError = new Error(
+								"AI prompt was cancelled due to timeout",
+							);
+							const context: TimeoutContext = {
+								timeoutMs: timeout,
+								originalPrompt: prompt,
+							};
+							return onTimeout(timeoutError, context);
+						}
+						// No recovery or recovery failed
+						return err(new Error("AI prompt was cancelled due to timeout"));
+					}
+
+					return err(
+						new Error(
+							`AI prompt failed: ${error instanceof Error ? error.message : "Unknown error"}`,
+						),
+					);
+				} finally {
+					// Always clean up
+					if (timeoutId) {
+						clearTimeout(timeoutId);
+					}
+					session?.destroy();
 				}
 			}
-		} else if (sessionOptions?.initialPrompts) {
-			// No instance system prompt, use session options as is
-			mergedOptions.initialPrompts = sessionOptions.initialPrompts;
-		}
 
-		// Create session
-		session = await LanguageModel.create(mergedOptions);
-
-		// Send prompt and return response
-		return await session.prompt(prompt, finalPromptOptions);
-	} catch (error) {
-		if (error instanceof DOMException && error.name === "AbortError") {
-			console.info("AI prompt was cancelled by user");
-			return null;
-		}
-
-		const aiError = new ChromeAIError(
-			`AI prompt failed: ${error instanceof Error ? error.message : "Unknown error"}`,
-			"PROMPT_FAILED",
-		);
-		console.error(aiError.message, error);
-		return null;
-	} finally {
-		// Always clean up
-		if (timeoutId) {
-			clearTimeout(timeoutId);
-		}
-		session?.destroy();
-	}
+			// If we get here, we've exhausted our attempts
+			return err(
+				new Error("Failed to complete prompt after maximum retry attempts"),
+			);
+		})(),
+	);
 }
 
 /**
- * Creates a reusable AI session using the initialized Chrome AI instance.
- * The session will include the instance's system prompt automatically.
+ * Performs a single prompt using the initialized Chromium AI instance.
+ * This is the default version that throws errors instead of returning Result types.
+ * 
+ * @see {@link promptSafe} for the safe version that returns Result types
+ * @param onInputTooLong Called when input is too long. Return a shorter prompt to retry.
+ * @param onTimeout Called when request times out. Return a prompt to retry.
+ * @returns The AI's response
+ * @throws {Error} If the prompt fails
+ * 
+ * @example
+ * // Basic usage
+ * const response = await prompt(ai, "What is TypeScript?");
+ * 
+ * @example
+ * // With recovery callbacks
+ * const response = await prompt(
+ *   ai,
+ *   "Very long prompt...",
+ *   5000,
+ *   undefined,
+ *   undefined,
+ *   true,
+ *   async (error, context) => "Shorter prompt", // onInputTooLong
+ *   async (error, context) => context.originalPrompt // onTimeout
+ * );
+ */
+export async function prompt(
+	instance: ChromiumAIInstance,
+	prompt: string,
+	timeout?: number,
+	promptOptions?: LanguageModelPromptOptions,
+	sessionOptions?: LanguageModelCreateOptions,
+	checkInputLimitBeforeSending?: boolean,
+	/** Called when the input prompt is too long. Return a shorter prompt to retry. */
+	onInputTooLong?: (
+		err: Error,
+		context: InputTooLongContext,
+	) => Promise<string>,
+	/** Called when the request times out. Return the prompt to retry. */
+	onTimeout?: (err: Error, context: TimeoutContext) => Promise<string>,
+): Promise<string> {
+	const result = await promptSafe(
+		instance,
+		prompt,
+		timeout,
+		promptOptions,
+		sessionOptions,
+		checkInputLimitBeforeSending,
+		onInputTooLong
+			? (err, context) => 
+					 ResultAsync.fromSafePromise(onInputTooLong(err, context))
+			: undefined,
+
+		onTimeout
+			? (err, context) => 
+					 ResultAsync.fromSafePromise(onTimeout(err, context))
+			: undefined,
+	);
+	return okOrThrow(result);
+}
+
+/**
+ * Creates a reusable AI session using the initialized Chromium AI instance.
+ * This is the safe version that returns a Result instead of throwing.
  *
- * @param instance The initialized Chrome AI instance from initializeChromeAI()
+ * @param instance The initialized Chromium AI instance
  * @param options Additional session options (merged with instance system prompt)
- * @returns Session object for multiple prompts, or null if failed
+ * @returns A Result containing either a session object or an Error
  *
  * @example
- * // Create a conversational session
- * const ai = await initializeChromeAI("You are a friendly chatbot");
- * if (ai) {
- *   const session = await createSession(ai);
- *   if (session) {
- *     try {
- *       const response1 = await session.prompt("Hello!");
- *       const response2 = await session.prompt("How are you?");
- *     } finally {
- *       session.destroy();
- *     }
+ * // Using Result type
+ * const sessionResult = await createSessionSafe(ai);
+ * if (sessionResult.isOk()) {
+ *   const session = sessionResult.value;
+ *   try {
+ *     const response = await session.prompt("Hello!");
+ *   } finally {
+ *     session.destroy();
  *   }
  * }
- *
+ */
+export function createSessionSafe(
+	instance: ChromiumAIInstance,
+	options?: LanguageModelCreateOptions,
+): ResultAsync<LanguageModel, Error> {
+	return new ResultAsync(
+		(async () => {
+			try {
+				// Merge instance system prompt with session options
+				const mergedOptions: LanguageModelCreateOptions = {
+					...options,
+				};
+
+				if (instance.systemPrompt) {
+					const systemMessage: LanguageModelSystemMessage = {
+						role: "system" as LanguageModelSystemMessageRole,
+						content: instance.systemPrompt,
+					};
+
+					// Always use our system message as the first prompt
+					mergedOptions.initialPrompts = [systemMessage];
+
+					// If options has initial prompts, append non-system messages
+					if (options?.initialPrompts && options.initialPrompts.length > 0) {
+						// Skip the first (system) message from options and add the rest
+						const nonSystemMessages = options.initialPrompts.slice(
+							1,
+						) as LanguageModelMessage[];
+						if (nonSystemMessages.length > 0) {
+							mergedOptions.initialPrompts = [
+								systemMessage,
+								...nonSystemMessages,
+							];
+						}
+					}
+				} else if (options?.initialPrompts) {
+					// No instance system prompt, use options as is
+					mergedOptions.initialPrompts = options.initialPrompts;
+				}
+
+				const session = await LanguageModel.create(mergedOptions);
+				return ok(session);
+			} catch (error) {
+				return err(
+					new Error(
+						`Failed to create AI session: ${error instanceof Error ? error.message : "Unknown error"}. This might be due to rate limiting or resource constraints.`,
+					),
+				);
+			}
+		})(),
+	);
+}
+
+/**
+ * Creates a reusable AI session using the initialized Chromium AI instance.
+ * This is the default version that throws errors instead of returning Result types.
+ * 
+ * @see {@link createSessionSafe} for the safe version that returns Result types
+ * @returns Session object for multiple prompts
+ * @throws {Error} If session creation fails
+ * 
  * @example
- * // With additional options
- * const ai = await initializeChromeAI();
- * if (ai) {
- *   const session = await createSession(ai, {
- *     temperature: 0.8,
- *     topK: 40
- *   });
+ * const session = await createSession(ai);
+ * try {
+ *   const response = await session.prompt("Hello!");
+ * } finally {
+ *   session.destroy();
  * }
  */
 export async function createSession(
-	instance: ChromeAIInstance,
+	instance: ChromiumAIInstance,
 	options?: LanguageModelCreateOptions,
-): Promise<LanguageModel | null> {
-	try {
-		// Merge instance system prompt with session options
-		const mergedOptions: LanguageModelCreateOptions = {
-			...options,
-		};
-
-		if (instance.systemPrompt) {
-			const systemMessage: LanguageModelSystemMessage = {
-				role: "system" as LanguageModelSystemMessageRole,
-				content: instance.systemPrompt,
-			};
-			
-			// Always use our system message as the first prompt
-			mergedOptions.initialPrompts = [systemMessage];
-			
-			// If options has initial prompts, append non-system messages
-			if (options?.initialPrompts && options.initialPrompts.length > 0) {
-				// Skip the first (system) message from options and add the rest
-				const nonSystemMessages = options.initialPrompts.slice(1) as LanguageModelMessage[];
-				if (nonSystemMessages.length > 0) {
-					mergedOptions.initialPrompts = [systemMessage, ...nonSystemMessages];
-				}
-			}
-		} else if (options?.initialPrompts) {
-			// No instance system prompt, use options as is
-			mergedOptions.initialPrompts = options.initialPrompts;
-		}
-
-		return await LanguageModel.create(mergedOptions);
-	} catch (error) {
-		const aiError = new ChromeAIError(
-			`Failed to create AI session: ${error instanceof Error ? error.message : "Unknown error"}. This might be due to rate limiting or resource constraints.`,
-			"SESSION_FAILED",
-		);
-		console.error(aiError.message, error);
-		return null;
-	}
+): Promise<LanguageModel> {
+	const result = await createSessionSafe(instance, options);
+	return okOrThrow(result);
 }
 
+/**
+ * Executes a callback with a temporary session, ensuring proper cleanup.
+ * This is the safe version that returns a Result instead of throwing.
+ *
+ * @param instance The initialized Chromium AI instance
+ * @param callback The callback to execute with the session
+ * @param options Additional session options
+ * @returns A Result containing either the callback result or an Error
+ *
+ * @example
+ * // Count tokens with error handling
+ * const result = await withSessionSafe(ai, async (session) => {
+ *   return await session.measureInputUsage("Hello world");
+ * });
+ * result.match(
+ *   tokenCount => console.log(`Token count: ${tokenCount}`),
+ *   error => console.error("Failed:", error.message)
+ * );
+ *
+ * @example
+ * // Chain with other operations
+ * await withSessionSafe(ai, async (session) => {
+ *   const prompt = "Long text...";
+ *   const tokens = await session.measureInputUsage(prompt);
+ *   if (tokens > session.inputQuota) {
+ *     throw new Error("Prompt too long");
+ *   }
+ *   return await session.prompt(prompt);
+ * }).match(
+ *   response => console.log(response),
+ *   error => console.error(error)
+ * );
+ */
+export function withSessionSafe<T>(
+	instance: ChromiumAIInstance,
+	callback: (session: LanguageModel) => Promise<T>,
+	options?: LanguageModelCreateOptions,
+): ResultAsync<T, Error> {
+	return new ResultAsync(
+		(async () => {
+			const sessionResult = await createSessionSafe(instance, options);
+			if (sessionResult.isErr()) {
+				return err(sessionResult.error);
+			}
+
+			const session = sessionResult.value;
+			try {
+				const result = await callback(session);
+				return ok(result);
+			} catch (error) {
+				return err(
+					new Error(
+						`Callback failed: ${error instanceof Error ? error.message : "Unknown error"}`,
+					),
+				);
+			} finally {
+				session.destroy();
+			}
+		})(),
+	);
+}
 
 /**
- * ChromeAI namespace containing all SDK functions for convenient access
+ * Executes a callback with a temporary session, ensuring proper cleanup.
+ * This is the default version that throws errors instead of returning Result types.
+ * 
+ * @see {@link withSessionSafe} for the safe version that returns Result types
+ * @returns The result of the callback
+ * @throws {Error} If session creation or callback execution fails
+ * 
  * @example
- * import ChromeAI from 'simple-chromium-ai';
- *
- * const ai = await ChromeAI.initialize("You are helpful");
- * if (ai) {
- *   const response = await ChromeAI.singlePrompt(ai, "Hello!");
- * }
+ * const tokenCount = await withSession(ai, async (session) => {
+ *   return await session.measureInputUsage("Hello world");
+ * });
  */
-export const ChromeAI = {
-	initialize: initializeChromeAI,
-	singlePrompt,
+export async function withSession<T>(
+	instance: ChromiumAIInstance,
+	callback: (session: LanguageModel) => Promise<T>,
+	options?: LanguageModelCreateOptions,
+): Promise<T> {
+	const result = await withSessionSafe(instance, callback, options);
+	return okOrThrow(result);
+}
+
+/**
+ * ChromiumAI namespace containing all SDK functions for convenient access
+ * @example
+ * import ChromiumAI from 'simple-chromium-ai';
+ *
+ * // Default API (throws errors)
+ * try {
+ *   const ai = await ChromiumAI.initialize("You are helpful");
+ *   const response = await ChromiumAI.prompt(ai, "Hello!");
+ * } catch (error) {
+ *   console.error(error);
+ * }
+ *
+ * // Safe API (returns Results)
+ * await ChromiumAI.initializeSafe("You are helpful")
+ *   .andThen(ai => ChromiumAI.promptSafe(ai, "Hello!"))
+ *   .match(
+ *     response => console.log(response),
+ *     error => console.error(error)
+ *   );
+ */
+export const ChromiumAI = {
+	// Default API (throws errors)
+	initialize,
+	prompt,
 	createSession,
-	ChromeAIError,
+	withSession,
+
+	// Safe API (returns Results)
+	initializeSafe,
+	promptSafe,
+	createSessionSafe,
+	withSessionSafe,
 };
 
 // Default export for convenience
-export default ChromeAI;
+export default ChromiumAI;
+
+// Alternative function names for convenience
+export const initializeChromiumAI = initialize;
+export const singlePrompt = prompt;
+
+// Backward compatibility aliases
+export const ChromeAI = ChromiumAI;
+export type ChromeAIInstance = ChromiumAIInstance;

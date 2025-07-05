@@ -17,7 +17,7 @@ A lightweight, type-safe SDK for Chrome's built-in AI capabilities. This SDK pro
 - Chrome 127+ or Edge 127+ with AI features enabled
 - The browser must have the AI Language Model API available
 
-### Enabling Chrome AI
+### Enabling Chromium AI
 
 1. Open Chrome and navigate to `chrome://flags`
 2. Search for "Prompt API for Gemini Nano"
@@ -41,174 +41,291 @@ The SDK includes TypeScript types from `@types/dom-chromium-ai` as a dependency,
 
 ## Quick Start
 
+### Default API (Throws Errors)
+
 ```javascript
-import { initializeChromeAI, singlePrompt } from 'simple-chromium-ai';
+import ChromiumAI from 'simple-chromium-ai';
 
-// Initialize Chrome AI with a system prompt
-const ai = await initializeChromeAI("You are a helpful assistant");
-
-if (ai) {
+try {
+  // Initialize Chromium AI with a system prompt
+  const ai = await ChromiumAI.initialize("You are a helpful assistant");
+  
   // Use the AI instance for a single prompt
-  const response = await singlePrompt(ai, "Write a haiku about coding");
+  const response = await ChromiumAI.prompt(ai, "Write a haiku about coding");
   console.log(response);
-} else {
-  console.error("Chrome AI is not available");
+} catch (error) {
+  console.error("Chromium AI error:", error.message);
 }
+```
+
+### Safe API (Returns Results)
+
+```javascript
+import ChromiumAI from 'simple-chromium-ai';
+
+// Using Result types for better error handling
+await ChromiumAI.initializeSafe("You are a helpful assistant")
+  .andThen(ai => ChromiumAI.promptSafe(ai, "Write a haiku about coding"))
+  .match(
+    response => console.log(response),
+    error => console.error("Error:", error.message)
+  );
 ```
 
 ## Type-Safe Design
 
-This SDK uses TypeScript's type system to ensure proper initialization. You cannot use any AI functions without first initializing and obtaining a `ChromeAIInstance` object:
+This SDK uses TypeScript's type system to ensure proper initialization. You cannot use any AI functions without first initializing and obtaining a `ChromiumAIInstance` object:
 
 ```typescript
-// ❌ This won't compile - singlePrompt requires an AI instance
-const response = await singlePrompt("Hello"); // Type error!
+// ❌ This won't compile - prompt requires an AI instance
+const response = await ChromiumAI.prompt("Hello"); // Type error!
 
 // ✅ Proper usage - initialize first
-const ai = await initializeChromeAI();
-if (ai) {
-  const response = await singlePrompt(ai, "Hello");
-}
+const ai = await ChromiumAI.initialize();
+const response = await ChromiumAI.prompt(ai, "Hello");
 ```
 
 ## API Reference
 
-### initializeChromeAI
+All functions have two versions:
+- **Default API**: Throws errors for simpler code
+- **Safe API**: Returns `Result` types for better error handling
 
-Initializes Chrome AI and returns an instance object that must be used with all other functions.
+### initialize / initializeSafe
+
+Initializes Chromium AI and returns an instance object that must be used with all other functions.
 
 ```typescript
-initializeChromeAI(
+// Default API (throws errors)
+ChromiumAI.initialize(
   systemPrompt?: string,
   onDownloadProgress?: (progress: number) => void
-): Promise<ChromeAIInstance | null>
+): Promise<ChromiumAIInstance>
+
+// Safe API (returns Result)
+ChromiumAI.initializeSafe(
+  systemPrompt?: string,
+  onDownloadProgress?: (progress: number) => void
+): ResultAsync<ChromiumAIInstance, Error>
 ```
 
-#### Examples
+**Parameters:**
+- `systemPrompt`: Optional system prompt for all sessions created from this instance
+- `onDownloadProgress`: Optional callback for model download progress (0-100)
 
+**Examples:**
 ```javascript
 // Basic initialization
-const ai = await initializeChromeAI();
+const ai = await ChromiumAI.initialize();
 
-// With system prompt for consistent behavior
-const ai = await initializeChromeAI(
-  "You are a helpful assistant that provides concise answers."
-);
-
-// With download progress monitoring
-const ai = await initializeChromeAI(
-  "You are a coding assistant",
+// With system prompt and progress tracking
+const ai = await ChromiumAI.initialize(
+  "You are a helpful assistant",
   (progress) => console.log(`Downloading: ${progress}%`)
 );
+
+// Safe version with error handling
+await ChromiumAI.initializeSafe("You are helpful")
+  .match(
+    ai => console.log("Initialized!"),
+    error => console.error("Failed:", error.message)
+  );
 ```
 
-### singlePrompt
+### prompt / promptSafe
 
-Performs a single prompt using the initialized Chrome AI instance.
+Performs a single prompt using the initialized Chromium AI instance.
 
 ```typescript
-singlePrompt(
-  instance: ChromeAIInstance,
+// Default API (throws errors)
+ChromiumAI.prompt(
+  instance: ChromiumAIInstance,
   prompt: string,
   timeout?: number,
   promptOptions?: LanguageModelPromptOptions,
-  sessionOptions?: LanguageModelCreateOptions
-): Promise<string | null>
+  sessionOptions?: LanguageModelCreateOptions,
+  checkInputLimitBeforeSending?: boolean,
+  onInputTooLong?: (err: Error, context: InputTooLongContext) => Promise<string>,
+  onTimeout?: (err: Error, context: TimeoutContext) => Promise<string>
+): Promise<string>
+
+// Safe API (returns Result)
+ChromiumAI.promptSafe(
+  instance: ChromiumAIInstance,
+  prompt: string,
+  timeout?: number,
+  promptOptions?: LanguageModelPromptOptions,
+  sessionOptions?: LanguageModelCreateOptions,
+  checkInputLimitBeforeSending?: boolean,
+  onInputTooLong?: (err: Error, context: InputTooLongContext) => PromptResult,
+  onTimeout?: (err: Error, context: TimeoutContext) => PromptResult
+): ResultAsync<string, Error>
 ```
 
-#### Examples
+**Key Parameters:**
+- `instance`: The initialized Chromium AI instance
+- `prompt`: The user's prompt text
+- `timeout`: Optional timeout in milliseconds
+- `checkInputLimitBeforeSending`: Pre-check token limits before sending
+- `onInputTooLong`: Recovery callback when prompt exceeds limits
+- `onTimeout`: Recovery callback when request times out
 
+**Examples:**
 ```javascript
-const ai = await initializeChromeAI("You are helpful and concise");
-if (ai) {
-  // Basic usage
-  const response = await singlePrompt(ai, "Explain quantum computing");
-  
-  // With timeout (5 seconds)
-  const response = await singlePrompt(ai, "Write a story", 5000);
-  
-  // With custom cancellation
-  const controller = new AbortController();
-  const response = await singlePrompt(
-    ai,
-    "Write a long story",
-    undefined,
-    { signal: controller.signal }
-  );
-  
-  // With session options
-  const response = await singlePrompt(
-    ai,
-    "Generate creative content",
-    undefined,
-    undefined,
-    { temperature: 0.8, topK: 40 }
-  );
-  
-  // With timeout and session options
-  const response = await singlePrompt(
-    ai,
-    "Quick summary",
-    3000,
-    undefined,
-    { temperature: 0.3 }
-  );
-  
-  // With both timeout and manual cancellation (both will work)
-  const controller = new AbortController();
-  const response = await singlePrompt(
-    ai,
-    "Complex analysis",
-    10000, // 10 second timeout
-    { signal: controller.signal } // Can still manually abort
-  );
-  // Either timeout OR controller.abort() will cancel the request
-}
+// Basic usage
+const response = await ChromiumAI.prompt(ai, "Explain quantum computing");
+
+// With timeout and error recovery
+const response = await ChromiumAI.prompt(
+  ai,
+  "Write a long story",
+  5000, // 5 second timeout
+  undefined,
+  undefined,
+  true, // check token limits
+  async (error, context) => {
+    // Called if prompt is too long
+    console.log(`Too long: ${context.tokenCount} tokens`);
+    return "Write a short story instead";
+  },
+  async (error, context) => {
+    // Called on timeout - retry once
+    return context.originalPrompt;
+  }
+);
 ```
 
-### createSession
+### createSession / createSessionSafe
 
-Creates a reusable AI session using the initialized Chrome AI instance.
+Creates a reusable AI session for multiple prompts with context retention.
 
 ```typescript
-createSession(
-  instance: ChromeAIInstance,
+// Default API (throws errors)
+ChromiumAI.createSession(
+  instance: ChromiumAIInstance,
   options?: LanguageModelCreateOptions
-): Promise<LanguageModel | null>
+): Promise<LanguageModel>
+
+// Safe API (returns Result)
+ChromiumAI.createSessionSafe(
+  instance: ChromiumAIInstance,
+  options?: LanguageModelCreateOptions
+): ResultAsync<LanguageModel, Error>
 ```
 
-#### Examples
-
+**Examples:**
 ```javascript
-const ai = await initializeChromeAI("You are a friendly chatbot");
-if (ai) {
-  const session = await createSession(ai);
-  if (session) {
-    try {
-      const response1 = await session.prompt("Hello!");
-      const response2 = await session.prompt("How are you?");
-      // The session remembers context between prompts
-    } finally {
-      session.destroy(); // Always clean up!
-    }
-  }
+const session = await ChromiumAI.createSession(ai);
+try {
+  const response1 = await session.prompt("Hello!");
+  const response2 = await session.prompt("How are you?");
+  // The session remembers context between prompts
+} finally {
+  session.destroy(); // Always clean up!
 }
 ```
 
+### withSession / withSessionSafe
+
+Executes a callback with a temporary session, ensuring proper cleanup.
+
+```typescript
+// Default API (throws errors)
+ChromiumAI.withSession<T>(
+  instance: ChromiumAIInstance,
+  callback: (session: LanguageModel) => Promise<T>,
+  options?: LanguageModelCreateOptions
+): Promise<T>
+
+// Safe API (returns Result)
+ChromiumAI.withSessionSafe<T>(
+  instance: ChromiumAIInstance,
+  callback: (session: LanguageModel) => Promise<T>,
+  options?: LanguageModelCreateOptions
+): ResultAsync<T, Error>
+```
+
+**Examples:**
+```javascript
+// Count tokens without managing session lifecycle
+const tokenCount = await ChromiumAI.withSession(ai, async (session) => {
+  return await session.measureInputUsage("Hello world");
+});
+
+// Get session information
+const info = await ChromiumAI.withSession(ai, async (session) => {
+  return {
+    inputQuota: session.inputQuota,
+    inputUsage: session.inputUsage,
+    outputQuota: session.outputQuota,
+    outputUsage: session.outputUsage
+  };
+});
+
+// Safe version with error handling
+await ChromiumAI.withSessionSafe(ai, async (session) => {
+  const tokens = await session.measureInputUsage(prompt);
+  if (tokens > session.inputQuota) {
+    throw new Error("Prompt too long");
+  }
+  return await session.prompt(prompt);
+}).match(
+  response => console.log(response),
+  error => console.error("Failed:", error.message)
+);
+```
+
+
+## Working with Result Types
+
+The Safe API uses [neverthrow](https://github.com/supermacro/neverthrow) Result types for better error handling in TypeScript:
+
+```typescript
+import ChromiumAI, { Result, ResultAsync } from 'simple-chromium-ai';
+
+// Chain operations with confidence
+await ChromiumAI.initializeSafe()
+  .andThen(ai => ChromiumAI.promptSafe(ai, "Hello"))
+  .map(response => response.toUpperCase())
+  .match(
+    success => console.log("Success:", success),
+    error => console.error("Error:", error.message)
+  );
+
+// Check results explicitly
+const result = await ChromiumAI.initializeSafe();
+if (result.isOk()) {
+  const ai = result.value;
+  // Use ai...
+} else {
+  const error = result.error;
+  console.error(`Failed: ${error.message}`);
+}
+
+// Combine multiple operations
+const results = await ResultAsync.combine([
+  ChromiumAI.promptSafe(ai, "Question 1"),
+  ChromiumAI.promptSafe(ai, "Question 2"),
+  ChromiumAI.promptSafe(ai, "Question 3")
+]);
+
+if (results.isOk()) {
+  const [answer1, answer2, answer3] = results.value;
+  // Process all answers...
+}
+```
 
 ## Common Use Cases
 
 ### Chat Application
 
 ```javascript
-const ai = await initializeChromeAI("You are a friendly AI assistant");
-if (!ai) {
-  alert("Chrome AI is not available");
-  return;
-}
+import ChromiumAI from 'simple-chromium-ai';
 
-const session = await createSession(ai);
-if (session) {
+try {
+  const ai = await ChromiumAI.initialize("You are a friendly AI assistant");
+  const session = await ChromiumAI.createSession(ai);
+  
   try {
     while (true) {
       const userInput = prompt("You: ");
@@ -220,69 +337,114 @@ if (session) {
   } finally {
     session.destroy();
   }
+} catch (error) {
+  alert(`Chromium AI error: ${error.message}`);
 }
 ```
 
 ### Content Generation with Timeout
 
 ```javascript
-const ai = await initializeChromeAI(
+const ai = await ChromiumAI.initialize(
   "You are a creative writer. Keep responses under 100 words."
 );
 
-if (ai) {
-  const topics = ["space", "ocean", "technology"];
-  
-  for (const topic of topics) {
-    const story = await singlePrompt(
+const topics = ["space", "ocean", "technology"];
+
+for (const topic of topics) {
+  try {
+    const story = await ChromiumAI.prompt(
       ai,
       `Write a micro-story about ${topic}`,
       3000 // 3-second timeout
     );
-    
-    if (story) {
-      console.log(`Story about ${topic}:\n${story}\n`);
+    console.log(`Story about ${topic}:\n${story}\n`);
+  } catch (error) {
+    if (error.message.includes("timeout")) {
+      console.log(`Story generation timed out for ${topic}`);
     } else {
-      console.log(`Failed to generate story about ${topic}`);
+      console.log(`Failed to generate story about ${topic}: ${error.message}`);
     }
   }
 }
 ```
 
+### Token Counting
+
+```javascript
+// Check token count before sending a prompt
+const longPrompt = "Very long text...";
+
+const tokenCount = await ChromiumAI.withSession(ai, async (session) => {
+  return await session.measureInputUsage(longPrompt);
+});
+
+console.log(`Prompt uses ${tokenCount} tokens`);
+
+// Or use withSessionSafe for error handling
+await ChromiumAI.withSessionSafe(ai, async (session) => {
+  const tokens = await session.measureInputUsage(longPrompt);
+  const available = session.inputQuota - session.inputUsage;
+  
+  if (tokens > available) {
+    throw new Error(`Prompt too long: needs ${tokens}, only ${available} available`);
+  }
+  
+  return await session.prompt(longPrompt);
+}).match(
+  response => console.log("Response:", response),
+  error => console.error("Error:", error.message)
+);
+```
+
 ### Error Handling
 
 ```javascript
-import { initializeChromeAI, singlePrompt, ChromeAIError } from 'simple-chromium-ai';
+import ChromiumAI from 'simple-chromium-ai';
 
-const ai = await initializeChromeAI();
-
-if (!ai) {
-  // Handle initialization failure
-  console.error("Please enable Chrome AI features");
-  return;
-}
-
+// Basic error handling
 try {
-  const response = await singlePrompt(ai, "Hello!");
-  if (response) {
-    console.log(response);
-  } else {
-    console.log("Failed to get response");
-  }
+  const ai = await ChromiumAI.initialize();
+  const response = await ChromiumAI.prompt(ai, "Hello!");
+  console.log(response);
 } catch (error) {
-  if (error instanceof ChromeAIError) {
-    switch (error.code) {
-      case "UNAVAILABLE":
-        console.error("AI is not available");
-        break;
-      case "TIMEOUT":
-        console.error("Request timed out");
-        break;
-      default:
-        console.error("AI error:", error.message);
-    }
+  console.error(`Error: ${error.message}`);
+  
+  // Check error message to determine the issue
+  if (error.message.includes("not available")) {
+    console.log("Chromium AI needs to be enabled. See setup instructions.");
+  } else if (error.message.includes("exceeds available token limit")) {
+    console.log("Prompt is too long. Try a shorter prompt.");
+  } else if (error.message.includes("timeout")) {
+    console.log("Request timed out. Try again or increase timeout.");
   }
 }
+
+// Advanced: Using recovery callbacks
+const response = await ChromiumAI.prompt(
+  ai,
+  "Very long prompt that might exceed limits...",
+  5000, // 5 second timeout
+  undefined,
+  undefined,
+  true, // Check input limits
+  async (error, context) => {
+    // onInputTooLong callback
+    console.log(`Prompt too long: ${context.tokenCount} tokens`);
+    console.log(`Max allowed: ${context.maxTokens}`);
+    
+    // Automatically shorten the prompt
+    const shortened = context.originalPrompt.slice(0, 1000) + "...";
+    console.log("Retrying with shorter prompt");
+    return shortened;
+  },
+  async (error, context) => {
+    // onTimeout callback
+    console.log(`Timeout after ${context.timeoutMs}ms, retrying...`);
+    // Retry the same prompt
+    return context.originalPrompt;
+  }
+);
 ```
 
 ## Browser Compatibility
@@ -291,11 +453,11 @@ try {
 |---------|----------------|-------|
 | Chrome | 127+ | Requires flags enabled |
 | Edge | 127+ | Requires flags enabled |
-| Other browsers | Not supported | Chrome AI API not available |
+| Other browsers | Not supported | Chromium AI API not available |
 
 ## Troubleshooting
 
-### "Chrome AI API is not available"
+### "Chromium AI API is not available"
 
 1. Ensure you're using Chrome/Edge 127 or later
 2. Enable the "Prompt API for Gemini Nano" flag in chrome://flags
@@ -315,15 +477,13 @@ The SDK is designed to prevent common mistakes through TypeScript:
 
 ```typescript
 // ❌ Common mistakes prevented by types
-await singlePrompt("Hello"); // Error: Missing AI instance
-await createSession(); // Error: Missing AI instance
+await ChromiumAI.prompt("Hello"); // Error: Missing AI instance
+await ChromiumAI.createSession(); // Error: Missing AI instance
 
 // ✅ Correct usage enforced by types
-const ai = await initializeChromeAI();
-if (ai) {
-  await singlePrompt(ai, "Hello");
-  await createSession(ai);
-}
+const ai = await ChromiumAI.initialize();
+await ChromiumAI.prompt(ai, "Hello");
+await ChromiumAI.createSession(ai);
 ```
 
 ## License

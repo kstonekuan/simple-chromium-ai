@@ -6,9 +6,7 @@
 	"types": "dist/index.d.ts",
 	"scripts": {
 		"build": "vite build",
-		"check": "biome check --write .",
-		"lint": "biome lint --write .",
-		"format": "biome format --write ."
+		"check": "biome check --write && tsc --noEmit && vitest run --passWithNoTests && knip"
 	},
 	"keywords": [
 		"chrome-ai",
@@ -30,14 +28,17 @@
 	},
 	"homepage": "https://github.com/your-username/simple-chromium-ai#readme",
 	"dependencies": {
-		"@types/dom-chromium-ai": "0.0.9"
+		"@types/dom-chromium-ai": "0.0.9",
+		"neverthrow": "^8.2.0"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "2.0.6",
 		"@types/chrome": "0.0.329",
 		"@types/node": "^24.0.10",
+		"knip": "^5.61.3",
 		"typescript": "5.8.3",
 		"vite": "7.0.1",
-		"vite-plugin-dts": "^4.5.4"
+		"vite-plugin-dts": "^4.5.4",
+		"vitest": "^3.2.4"
 	}
 }
