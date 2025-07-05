@@ -6,21 +6,14 @@ import { err, ok, type Result, ResultAsync } from "neverthrow";
 export { err, ok, Result, ResultAsync } from "neverthrow";
 
 /**
- * Context provided to the onInputTooLong callback
+ * Information about token usage for a prompt
  */
-export interface InputTooLongContext {
-	tokenCount: number;
+export interface TokenUsageInfo {
+	promptTokens: number;
 	maxTokens: number;
 	tokensSoFar: number;
-	originalPrompt: string;
-}
-
-/**
- * Context provided to the onTimeout callback
- */
-export interface TimeoutContext {
-	timeoutMs: number;
-	originalPrompt: string;
+	tokensAvailable: number;
+	willFit: boolean;
 }
 
 /**
@@ -52,21 +45,11 @@ function okOrThrow<T, E>(result: Result<T, E>): T {
  * @returns A Result containing either a ChromiumAIInstance or an Error
  *
  * @example
- * // Using Result type
- * const result = await initializeSafe();
- * result.match(
- *   ai => console.log("Initialized successfully"),
- *   error => console.error("Failed:", error.message)
- * );
- *
- * @example
- * // With system prompt and chaining
- * await initializeSafe("You are a helpful assistant")
- *   .andThen(ai => promptSafe(ai, "Hello"))
- *   .match(
- *     response => console.log(response),
- *     error => console.error(error)
- *   );
+ * const result = await initializeSafe("You are a helpful assistant");
+ * if (result.isOk()) {
+ *   const ai = result.value;
+ *   // Use ai...
+ * }
  */
 export function initializeSafe(
 	systemPrompt?: string,
@@ -74,6 +57,9 @@ export function initializeSafe(
 ): ResultAsync<ChromiumAIInstance, Error> {
 	const unavailableError = new Error(
 		"Chromium AI API is not available. Please ensure you're using Chrome 138+ with AI features enabled or another Chromium browser that supports it.",
+	);
+	const downloadError = new Error(
+		"AI model download failed. Please check your internet connection and try again.",
 	);
 	return new ResultAsync(
 		(async () => {
@@ -89,27 +75,26 @@ export function initializeSafe(
 				return err(unavailableError);
 			}
 
-			// If already available, return immediately
-			if (availability === "available") {
-				return ok({
-					systemPrompt,
-					instanceId: crypto.randomUUID(),
-				});
+			// If downloadable, trigger download
+			if (availability === "downloadable" || availability === "downloading") {
+				try {
+					// Trigger download by creating a temporary session
+					const tempSession = await LanguageModel.create({
+						monitor: onDownloadProgress
+							? (m) => {
+									m.addEventListener("downloadprogress", (e) => {
+										onDownloadProgress(e.loaded * 100);
+									});
+								}
+							: undefined,
+					});
+
+					// Clean up the temporary session
+					tempSession.destroy();
+				} catch {
+					return err(downloadError);
+				}
 			}
-
-			// Trigger download by creating a temporary session
-			const tempSession = await LanguageModel.create({
-				monitor: onDownloadProgress
-					? (m) => {
-							m.addEventListener("downloadprogress", (e) => {
-								onDownloadProgress(e.loaded * 100);
-							});
-						}
-					: undefined,
-			});
-
-			// Clean up the temporary session
-			tempSession.destroy();
 
 			// Verify it's now available
 			const finalStatus = await LanguageModel.availability();
@@ -120,11 +105,7 @@ export function initializeSafe(
 				});
 			}
 
-			return err(
-				new Error(
-					"AI model download failed. Please check your internet connection and try again.",
-				),
-			);
+			return err(downloadError);
 		})(),
 	);
 }
@@ -159,15 +140,11 @@ export type PromptResult = ResultAsync<string, Error>;
  * @returns A Result containing either a session object or an Error
  *
  * @example
- * // Using Result type
  * const sessionResult = await createSessionSafe(ai);
  * if (sessionResult.isOk()) {
  *   const session = sessionResult.value;
- *   try {
- *     const response = await session.prompt("Hello!");
- *   } finally {
- *     session.destroy();
- *   }
+ *   // Use session...
+ *   session.destroy();
  * }
  */
 export function createSessionSafe(
@@ -232,11 +209,8 @@ export function createSessionSafe(
  *
  * @example
  * const session = await createSession(ai);
- * try {
- *   const response = await session.prompt("Hello!");
- * } finally {
- *   session.destroy();
- * }
+ * const response = await session.prompt("Hello!");
+ * session.destroy();
  */
 export async function createSession(
 	instance: ChromiumAIInstance,
@@ -251,61 +225,32 @@ export async function createSession(
  * This is the safe version that returns a Result instead of throwing.
  *
  * @param instance The initialized Chromium AI instance
- * @param callback The callback to execute with the session
+ * @param callback The callback to execute with the session - should return ResultAsync for safety
  * @param options Additional session options
  * @returns A Result containing either the callback result or an Error
  *
  * @example
- * // Count tokens with error handling
  * const result = await withSessionSafe(ai, async (session) => {
- *   return await session.measureInputUsage("Hello world");
+ *   return ResultAsync.fromSafePromise(session.measureInputUsage("Hello world"));
  * });
- * result.match(
- *   tokenCount => console.log(`Token count: ${tokenCount}`),
- *   error => console.error("Failed:", error.message)
- * );
- *
- * @example
- * // Chain with other operations
- * await withSessionSafe(ai, async (session) => {
- *   const prompt = "Long text...";
- *   const tokens = await session.measureInputUsage(prompt);
- *   if (tokens > session.inputQuota) {
- *     throw new Error("Prompt too long");
- *   }
- *   return await session.prompt(prompt);
- * }).match(
- *   response => console.log(response),
- *   error => console.error(error)
- * );
  */
 export function withSessionSafe<T>(
 	instance: ChromiumAIInstance,
-	callback: (session: LanguageModel) => Promise<T>,
+	callback: (session: LanguageModel) => ResultAsync<T, Error>,
 	options?: LanguageModelCreateOptions,
 ): ResultAsync<T, Error> {
-	return new ResultAsync(
-		(async () => {
-			const sessionResult = await createSessionSafe(instance, options);
-			if (sessionResult.isErr()) {
-				return err(sessionResult.error);
-			}
-
-			const session = sessionResult.value;
-			try {
-				const result = await callback(session);
-				return ok(result);
-			} catch (error) {
-				return err(
-					new Error(
-						`Callback failed: ${error instanceof Error ? error.message : "Unknown error"}`,
-					),
-				);
-			} finally {
+	return createSessionSafe(instance, options).andThen((session) => {
+		// Execute callback and ensure cleanup happens regardless of outcome
+		return callback(session)
+			.map((value) => {
 				session.destroy();
-			}
-		})(),
-	);
+				return value;
+			})
+			.mapErr((error) => {
+				session.destroy();
+				return error;
+			});
+	});
 }
 
 /**
@@ -326,7 +271,82 @@ export async function withSession<T>(
 	callback: (session: LanguageModel) => Promise<T>,
 	options?: LanguageModelCreateOptions,
 ): Promise<T> {
-	const result = await withSessionSafe(instance, callback, options);
+	const result = await withSessionSafe(
+		instance,
+		(session) =>
+			ResultAsync.fromPromise(callback(session), (error) =>
+				error instanceof Error ? error : new Error(String(error)),
+			),
+		options,
+	);
+	return okOrThrow(result);
+}
+
+/**
+ * Checks token usage for a prompt without sending it.
+ * This is the safe version that returns a Result instead of throwing.
+ *
+ * @param instance The initialized Chromium AI instance
+ * @param prompt The prompt to check
+ * @param sessionOptions Additional session options
+ * @returns A Result containing token usage information or an Error
+ *
+ * @example
+ * const usage = await checkTokenUsageSafe(ai, "Long prompt...");
+ * if (usage.isOk() && usage.value.willFit) {
+ *   const response = await prompt(ai, "Long prompt...");
+ * }
+ */
+export function checkTokenUsageSafe(
+	instance: ChromiumAIInstance,
+	prompt: string,
+	sessionOptions?: LanguageModelCreateOptions,
+): ResultAsync<TokenUsageInfo, Error> {
+	return withSessionSafe(
+		instance,
+		(session) => {
+			return ResultAsync.fromSafePromise(
+				(async () => {
+					const promptTokens = await session.measureInputUsage(prompt);
+					const maxTokens = session.inputQuota || 0;
+					const tokensSoFar = session.inputUsage || 0;
+					const tokensAvailable = maxTokens - tokensSoFar;
+
+					return {
+						promptTokens,
+						maxTokens,
+						tokensSoFar,
+						tokensAvailable,
+						willFit: promptTokens <= tokensAvailable,
+					};
+				})(),
+			);
+		},
+		sessionOptions,
+	);
+}
+
+/**
+ * Checks token usage for a prompt without sending it.
+ * This is the default version that throws errors instead of returning Result types.
+ *
+ * @see {@link checkTokenUsageSafe} for the safe version that returns Result types
+ * @returns Token usage information
+ * @throws {Error} If token checking fails
+ *
+ * @example
+ * const usage = await checkTokenUsage(ai, "Long prompt...");
+ * console.log(`Prompt uses ${usage.promptTokens} tokens`);
+ * if (usage.willFit) {
+ *   const response = await prompt(ai, "Long prompt...");
+ * }
+ */
+export async function checkTokenUsage(
+	instance: ChromiumAIInstance,
+	prompt: string,
+	sessionOptions?: LanguageModelCreateOptions,
+): Promise<TokenUsageInfo> {
+	const result = await checkTokenUsageSafe(instance, prompt, sessionOptions);
 	return okOrThrow(result);
 }
 
@@ -339,61 +359,17 @@ export async function withSession<T>(
  * @param timeout Optional timeout in milliseconds
  * @param promptOptions Options for the prompt (signal, etc)
  * @param sessionOptions Additional session options (merged with instance system prompt)
- * @param checkInputLimitBeforeSending Check if the prompt exceeds token limits before sending
- * @param recoveryCallbacks Optional callbacks for handling recoverable errors
  * @returns A Result containing either the AI's response or an Error
  *
  * @example
- * // Using Result type
  * const result = await promptSafe(ai, "What is TypeScript?");
  * if (result.isOk()) {
  *   console.log(result.value);
  * }
  *
  * @example
- * // With token limit checking
- * const result = await promptSafe(
- *   ai,
- *   "Very long prompt...",
- *   undefined,
- *   undefined,
- *   undefined,
- *   true // checkInputLimitBeforeSending
- * );
- * if (result.isErr()) {
- *   console.log(`Error: ${result.error.message}`);
- * }
- *
- * @example
- * // With chaining
- * await promptSafe(ai, "Tell me a joke")
- *   .map(response => response.toUpperCase())
- *   .match(
- *     joke => console.log(joke),
- *     error => console.error(error)
- *   );
- *
- * @example
- * // With recovery callbacks
- * await promptSafe(
- *   ai,
- *   "Very long prompt...",
- *   5000,
- *   undefined,
- *   undefined,
- *   true,
- *   (error, context) => {
- *     // Return a shorter prompt
- *     return ResultAsync.fromSafePromise("Summarize briefly");
- *   },
- *   (error, context) => {
- *     // Handle timeout - return error to fail
- *     return err(new Error("Timeout - aborting"));
- *   }
- * ).match(
- *   response => console.log("Success:", response),
- *   error => console.error("Error:", error.message)
- * );
+ * // With timeout
+ * const result = await promptSafe(ai, "Explain quantum computing", 5000);
  */
 export function promptSafe(
 	instance: ChromiumAIInstance,
@@ -401,122 +377,61 @@ export function promptSafe(
 	timeout?: number,
 	promptOptions?: LanguageModelPromptOptions,
 	sessionOptions?: LanguageModelCreateOptions,
-	checkInputLimitBeforeSending?: boolean,
-	/** Called when the input prompt is too long. Return a shorter prompt to retry. */
-	onInputTooLong?: (err: Error, context: InputTooLongContext) => PromptResult,
-	/** Called when the request times out. Return the prompt to retry. */
-	onTimeout?: (err: Error, context: TimeoutContext) => PromptResult,
 ): PromptResult {
 	return withSessionSafe(
 		instance,
-		async (session) => {
+		(session) => {
 			let timeoutId: NodeJS.Timeout | null = null;
 
-			try {
-				// Handle abort signals - combine timeout and user-provided signal if both exist
-				let finalPromptOptions = promptOptions || {};
-				if (timeout || finalPromptOptions.signal) {
-					const signals: AbortSignal[] = [];
-
-					// Add user-provided signal if it exists
-					if (finalPromptOptions.signal) {
-						signals.push(finalPromptOptions.signal);
-					}
-
-					// Add timeout signal if timeout is specified
-					if (timeout) {
-						const timeoutController = new AbortController();
-						signals.push(timeoutController.signal);
-						timeoutId = setTimeout(() => timeoutController.abort(), timeout);
-					}
-
-					// Combine signals using AbortSignal.any() if available, otherwise use the single signal
-					if (signals.length > 1 && AbortSignal.any) {
-						finalPromptOptions = {
-							...finalPromptOptions,
-							signal: AbortSignal.any(signals),
-						};
-					} else if (signals.length === 1) {
-						finalPromptOptions = {
-							...finalPromptOptions,
-							signal: signals[0],
-						};
-					}
-				}
-
-				// Check token limits if requested
-				if (checkInputLimitBeforeSending) {
+			return ResultAsync.fromPromise(
+				(async () => {
 					try {
-						const promptTokens = await session.measureInputUsage(prompt);
+						// Handle abort signals - combine timeout and user-provided signal if both exist
+						let finalPromptOptions = promptOptions || {};
+						if (timeout || finalPromptOptions.signal) {
+							const signals: AbortSignal[] = [];
 
-						if (promptTokens !== undefined) {
-							// Get the context window size and current usage
-							const maxTokens = session.inputQuota;
-							const tokensSoFar = session.inputUsage;
-
-							if (maxTokens && promptTokens > maxTokens - tokensSoFar) {
-								const error = new Error(
-									`Prompt exceeds available token limit: ${promptTokens} tokens needed, but only ${maxTokens - tokensSoFar} available (max: ${maxTokens}, used: ${tokensSoFar})`,
-								);
-								// Try recovery callback if available
-								if (onInputTooLong) {
-									const context: InputTooLongContext = {
-										tokenCount: promptTokens,
-										maxTokens,
-										tokensSoFar,
-										originalPrompt: prompt,
-									};
-									const recoveryResult = await onInputTooLong(error, context);
-									if (recoveryResult.isOk()) {
-										return recoveryResult.value;
-									}
-									throw recoveryResult.error;
-								}
-								// No recovery callback
-								throw error;
+							// Add user-provided signal if it exists
+							if (finalPromptOptions.signal) {
+								signals.push(finalPromptOptions.signal);
 							}
-						} else {
-							console.warn(
-								"Token counting not available in this Chromium AI version",
-							);
-						}
-					} catch (tokenCheckError) {
-						// If token checking fails, log it but continue
-						console.warn("Failed to check token count:", tokenCheckError);
-					}
-				}
 
-				// Send prompt and return response
-				const response = await session.prompt(prompt, finalPromptOptions);
-				return response;
-			} catch (error) {
-				if (error instanceof DOMException && error.name === "AbortError") {
-					// Try recovery callback if available
-					if (onTimeout && timeout) {
-						const timeoutError = new Error(
-							"AI prompt was cancelled due to timeout",
-						);
-						const context: TimeoutContext = {
-							timeoutMs: timeout,
-							originalPrompt: prompt,
-						};
-						const recoveryResult = await onTimeout(timeoutError, context);
-						if (recoveryResult.isOk()) {
-							return recoveryResult.value;
-						}
-						throw recoveryResult.error;
-					}
-					// No recovery callback
-					throw new Error("AI prompt was cancelled due to timeout");
-				}
+							// Add timeout signal if timeout is specified
+							if (timeout) {
+								const timeoutController = new AbortController();
+								signals.push(timeoutController.signal);
+								timeoutId = setTimeout(
+									() => timeoutController.abort(),
+									timeout,
+								);
+							}
 
-				throw error;
-			} finally {
-				// Clean up timeout
-				if (timeoutId) {
-					clearTimeout(timeoutId);
-				}
-			}
+							// Combine signals using AbortSignal.any() if available, otherwise use the single signal
+							if (signals.length > 1 && AbortSignal.any) {
+								finalPromptOptions = {
+									...finalPromptOptions,
+									signal: AbortSignal.any(signals),
+								};
+							} else if (signals.length === 1) {
+								finalPromptOptions = {
+									...finalPromptOptions,
+									signal: signals[0],
+								};
+							}
+						}
+
+						// Send prompt and return response
+						const response = await session.prompt(prompt, finalPromptOptions);
+						return response;
+					} finally {
+						// Clean up timeout
+						if (timeoutId) {
+							clearTimeout(timeoutId);
+						}
+					}
+				})(),
+				(error) => (error instanceof Error ? error : new Error(String(error))),
+			);
 		},
 		sessionOptions,
 	);
@@ -527,29 +442,20 @@ export function promptSafe(
  * This is the default version that throws errors instead of returning Result types.
  *
  * @see {@link promptSafe} for the safe version that returns Result types
- * @param onInputTooLong Called when input is too long. Return a shorter prompt to retry.
- * @param onTimeout Called when request times out. Return a prompt to retry.
+ * @param instance The initialized Chromium AI instance
+ * @param prompt The user's prompt
+ * @param timeout Optional timeout in milliseconds
+ * @param promptOptions Options for the prompt (signal, etc)
+ * @param sessionOptions Additional session options (merged with instance system prompt)
  * @returns The AI's response
  * @throws {Error} If the prompt fails
  *
  * @example
- * // Basic usage
  * const response = await prompt(ai, "What is TypeScript?");
  *
  * @example
- * // With recovery callbacks
- * const response = await prompt(
- *   ai,
- *   "Very long prompt...",
- *   5000,
- *   undefined,
- *   undefined,
- *   true,
- *   async (error, context) => "Shorter prompt", // onInputTooLong
- *   async (error, context) => {
- *     throw error; // Propagate timeout error
- *   }
- * );
+ * // With timeout
+ * const response = await prompt(ai, "Explain quantum computing", 5000);
  */
 export async function prompt(
 	instance: ChromiumAIInstance,
@@ -557,14 +463,6 @@ export async function prompt(
 	timeout?: number,
 	promptOptions?: LanguageModelPromptOptions,
 	sessionOptions?: LanguageModelCreateOptions,
-	checkInputLimitBeforeSending?: boolean,
-	/** Called when the input prompt is too long. Return a shorter prompt to retry. */
-	onInputTooLong?: (
-		err: Error,
-		context: InputTooLongContext,
-	) => Promise<string>,
-	/** Called when the request times out. Return the prompt to retry. */
-	onTimeout?: (err: Error, context: TimeoutContext) => Promise<string>,
 ): Promise<string> {
 	const result = await promptSafe(
 		instance,
@@ -572,15 +470,6 @@ export async function prompt(
 		timeout,
 		promptOptions,
 		sessionOptions,
-		checkInputLimitBeforeSending,
-		onInputTooLong
-			? (err, context) =>
-					ResultAsync.fromSafePromise(onInputTooLong(err, context))
-			: undefined,
-
-		onTimeout
-			? (err, context) => ResultAsync.fromSafePromise(onTimeout(err, context))
-			: undefined,
 	);
 	return okOrThrow(result);
 }
@@ -590,34 +479,30 @@ export async function prompt(
  * @example
  * import ChromiumAI from 'simple-chromium-ai';
  *
- * // Default API (throws errors)
- * try {
- *   const ai = await ChromiumAI.initialize("You are helpful");
- *   const response = await ChromiumAI.prompt(ai, "Hello!");
- * } catch (error) {
- *   console.error(error);
- * }
+ * // Default API
+ * const ai = await ChromiumAI.initialize("You are helpful");
+ * const response = await ChromiumAI.prompt(ai, "Hello!");
  *
- * // Safe API (returns Results)
- * await ChromiumAI.initializeSafe("You are helpful")
- *   .andThen(ai => ChromiumAI.promptSafe(ai, "Hello!"))
- *   .match(
- *     response => console.log(response),
- *     error => console.error(error)
- *   );
+ * // Safe API
+ * const result = await ChromiumAI.initializeSafe("You are helpful");
+ * if (result.isOk()) {
+ *   const response = await ChromiumAI.promptSafe(result.value, "Hello!");
+ * }
  */
-export const ChromiumAI = {
+const ChromiumAI = {
 	// Safe API (returns Results)
 	initializeSafe,
 	promptSafe,
 	createSessionSafe,
 	withSessionSafe,
+	checkTokenUsageSafe,
 
 	// Default API (throws errors)
 	initialize,
 	prompt,
 	createSession,
 	withSession,
+	checkTokenUsage,
 };
 
 // Default export for convenience
