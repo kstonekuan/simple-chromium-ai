@@ -28,7 +28,7 @@
 	"license": "MIT",
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/kstonekuan/simple-chromium-ai.git"
+		"url": "git+https://github.com/kstonekuan/simple-chromium-ai.git"
 	},
 	"bugs": {
 		"url": "https://github.com/kstonekuan/simple-chromium-ai/issues"

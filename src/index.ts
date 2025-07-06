@@ -210,10 +210,9 @@ namespace Safe {
 						mergedOptions.initialPrompts = [systemMessage];
 					}
 
-
-						// If options has initial prompts, override the system prompt
-						if (options?.initialPrompts && options.initialPrompts.length > 0) {
-							mergedOptions.initialPrompts = options.initialPrompts;
+					// If options has initial prompts, override the system prompt
+					if (options?.initialPrompts && options.initialPrompts.length > 0) {
+						mergedOptions.initialPrompts = options.initialPrompts;
 					}
 
 					const session = await LanguageModel.create(mergedOptions);
