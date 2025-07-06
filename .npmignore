@@ -1,0 +1,25 @@
+# Source files
+src/
+examples/
+
+# Config files
+.gitignore
+biome.json
+tsconfig.json
+vite.config.ts
+
+# Development files
+*.log
+node_modules/
+.vscode/
+.idea/
+
+# Test files
+*.test.ts
+*.spec.ts
+__tests__/
+coverage/
+
+# Build artifacts
+*.tsbuildinfo
+**/*.tgz

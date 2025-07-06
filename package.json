@@ -1,0 +1,52 @@
+{
+	"name": "simple-chromium-ai",
+	"version": "0.1.0",
+	"description": "Simple type-safe wrapper for Chrome's AI Prompt API - trades flexibility for ease of use",
+	"main": "dist/simple-chromium-ai.umd.js",
+	"module": "dist/simple-chromium-ai.mjs",
+	"types": "dist/index.d.ts",
+	"files": [
+		"dist",
+		"README.md",
+		"LICENSE"
+	],
+	"scripts": {
+		"build": "vite build",
+		"check": "biome check --write && tsc --noEmit",
+		"prepublishOnly": "pnpm run check && pnpm run build"
+	},
+	"keywords": [
+		"chrome-ai",
+		"chromium",
+		"ai",
+		"gemini-nano",
+		"language-model",
+		"wrapper",
+		"typescript"
+	],
+	"author": "kstonekuan",
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/kstonekuan/simple-chromium-ai.git"
+	},
+	"bugs": {
+		"url": "https://github.com/kstonekuan/simple-chromium-ai/issues"
+	},
+	"homepage": "https://github.com/kstonekuan/simple-chromium-ai#readme",
+	"engines": {
+		"node": ">=14.0.0"
+	},
+	"dependencies": {
+		"@types/dom-chromium-ai": "0.0.9",
+		"neverthrow": "8.2.0"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "2.0.6",
+		"@types/node": "24.0.10",
+		"ts-pattern": "^5.7.1",
+		"typescript": "5.8.3",
+		"vite": "7.0.2",
+		"vite-plugin-dts": "4.5.4"
+	}
+}
