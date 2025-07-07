@@ -26,7 +26,7 @@ export function initialize(
 			"1. You must call this from a browser extension\n" +
 			"2. Use Chrome 138+ or supported Chromium browser\n" +
 			"3. Enable 'Prompt API for Gemini Nano' in chrome://flags\n" +
-			"4. Update 'Optimization Guide On Device Model' in chrome://components\n" +
+			"4. Update 'Optimization Guide On Device Model' in chrome://components (Warning: This will download ~22GB)\n" +
 			"5. Join Chrome EPP for web: https://developer.chrome.com/docs/ai/join-epp",
 	);
 	return new ResultAsync(
