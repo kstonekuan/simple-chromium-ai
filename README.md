@@ -30,16 +30,16 @@ const response = await ChromiumAI.prompt(ai, "Write a haiku");
 
 // Or use the Safe API for error handling
 const safeResult = await ChromiumAI.Safe.initialize("You are a helpful assistant");
-safeResult.match({
-  ok: async (ai) => {
+safeResult.match(
+  async (ai) => {
     const safeResponse = await ChromiumAI.Safe.prompt(ai, "Write a haiku");
-    safeResponse.match({
-      ok: (value) => console.log(value),
-      err: (error) => console.error(error.message)
-    });
+    safeResponse.match(
+      (value) => console.log(value),
+      (error) => console.error(error.message)
+    );
   },
-  err: (error) => console.error(error.message)
-});
+  (error) => console.error(error.message)
+);
 ```
 
 ## Prerequisites
@@ -104,19 +104,19 @@ Every function has a Safe variant that returns Result types instead of throwing:
 import { ChromiumAI } from 'simple-chromium-ai';
 
 const result = await ChromiumAI.Safe.initialize("You are helpful");
-result.match({
-  ok: async (ai) => {
+result.match(
+  async (ai) => {
     const response = await ChromiumAI.Safe.prompt(ai, "Hello");
-    response.match({
-      ok: (value) => console.log(value),
-      err: (error) => console.error("Prompt failed:", error.message)
-    });
+    response.match(
+      (value) => console.log(value),
+      (error) => console.error("Prompt failed:", error.message)
+    );
   },
-  err: (error) => {
+  (error) => {
     console.error("Failed:", error.message);
     return;
   }
-});
+);
 ```
 
 ## Type Safety
@@ -197,19 +197,19 @@ try {
 // Using the Safe API for better error handling
 const result = await ChromiumAI.Safe.initialize("You are helpful");
 
-result.match({
-  ok: async (ai) => {
+result.match(
+  async (ai) => {
     const promptResult = await ChromiumAI.Safe.prompt(ai, "Hello!");
-    promptResult.match({
-      ok: (value) => console.log('Response:', value),
-      err: (error) => console.error('Prompt failed:', error.message)
-    });
+    promptResult.match(
+      (value) => console.log('Response:', value),
+      (error) => console.error('Prompt failed:', error.message)
+    );
   },
-  err: (error) => {
+  (error) => {
     console.error('Initialization failed:', error.message);
     // Error message includes instructions on how to enable Chrome AI
   }
-});
+);
 ```
 
 ### Token Checking
@@ -284,6 +284,21 @@ try {
     console.error('Error:', error.message);
   }
 }
+```
+
+## Demo Extension
+
+A minimal Chrome extension demo is included in the `demo` folder. It demonstrates:
+- Checking Chrome AI availability
+- Showing setup instructions if not available
+- Simple prompt/response interface using the Safe API
+
+To run the demo:
+```bash
+cd demo
+npm install
+npm run build
+# Then load the demo folder as an unpacked extension in Chrome
 ```
 
 ## Resources

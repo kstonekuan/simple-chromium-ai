@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body { width: 400px; padding: 10px; font-family: monospace; }
+    textarea { width: 100%; margin: 10px 0; }
+    pre { white-space: pre-wrap; }
+  </style>
+</head>
+<body>
+  <div id="status">Checking Chrome AI...</div>
+  
+  <div id="interface" style="display: none;">
+    <textarea id="input" rows="3" placeholder="Enter prompt..."></textarea>
+    <button id="submit">Send</button>
+    <pre id="response"></pre>
+  </div>
+  
+  <script type="module" src="./popup.ts"></script>
+</body>
+</html>
