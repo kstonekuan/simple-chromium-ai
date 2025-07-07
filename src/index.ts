@@ -28,11 +28,6 @@ export interface ChromiumAIInstance {
 	readonly instanceId: string;
 }
 
-export type TriggerDownload = () => ResultAsync<ChromiumAIInstance, Error>;
-
-export type InitializeResult =
-	| { type: "initialized"; instance: ChromiumAIInstance }
-	| { type: "needs-download"; trigger: TriggerDownload };
 
 export type PromptResult = ResultAsync<string, Error>;
 
@@ -54,80 +49,26 @@ namespace Safe {
 	 * This is the safe version that returns a Result instead of throwing.
 	 *
 	 * @param systemPrompt Optional system prompt that will be used for all sessions
-	 * @param onDownloadProgress Optional callback for download progress
-	 * @returns A Result containing InitializeResult (tagged union)
+	 * @returns A Result containing InitializeResult
 	 *
 	 * @example
 	 * const result = await ChromiumAI.Safe.initialize("You are a helpful assistant");
 	 * if (result.isOk()) {
-	 *   const value = result.value;
-	 *   if (value.type === 'initialized') {
-	 *     const ai = value.instance;
-	 *     // Use ai...
-	 *   } else {
-	 *     // Need to trigger download
-	 *     const aiResult = await value.trigger();
-	 *     if (aiResult.isOk()) {
-	 *       const ai = aiResult.value;
-	 *       // Use ai...
-	 *     }
-	 *   }
+	 *   const ai = result.value.instance;
+	 *   // Use ai...
 	 * }
 	 */
 	export function initialize(
 		systemPrompt?: string,
-		onDownloadProgress?: (progress: number) => void,
-	): ResultAsync<InitializeResult, Error> {
+	): ResultAsync<ChromiumAIInstance, Error> {
 		const unavailableError = new Error(
-			"Chromium AI API is not available. Please ensure you're using Chrome 138+ with AI features enabled or another Chromium browser that supports it.",
+			"Chromium AI API is not available. To use Chrome AI:\n" +
+				"1. You must call this from a browser extension\n" +
+				"2. Use Chrome 138+ or supported Chromium browser\n" +
+				"3. Enable 'Prompt API for Gemini Nano' in chrome://flags\n" +
+				"4. Update 'Optimization Guide On Device Model' in chrome://components\n" +
+				"5. Join Chrome EPP for web: https://developer.chrome.com/docs/ai/join-epp",
 		);
-		const triggerOrViewDownload = (
-			availability: Availability,
-		): ResultAsync<ChromiumAIInstance, Error> => {
-			return new ResultAsync(
-				(async () => {
-					try {
-						// Trigger download by creating a temporary session
-						const tempSession = await LanguageModel.create({
-							monitor: onDownloadProgress
-								? (m) => {
-										m.addEventListener("downloadprogress", (e) => {
-											onDownloadProgress(e.loaded * 100);
-										});
-									}
-								: undefined,
-						});
-
-						// Clean up the temporary session
-						tempSession.destroy();
-					} catch (error) {
-						return err(
-							new Error(
-								`Failed to trigger or view download ${error instanceof Error ? error.message : "Unknown error"}, availability: ${availability}.`,
-							),
-						);
-					}
-
-					// Verify it's now available
-					const finalStatus = await LanguageModel.availability();
-
-					return match(finalStatus)
-						.with("available", () =>
-							ok({
-								systemPrompt,
-								instanceId: crypto.randomUUID(),
-							}),
-						)
-						.otherwise((status) =>
-							err(
-								new Error(
-									`Chromium AI API is still not available after download attempt. Current status: ${status}.`,
-								),
-							),
-						);
-				})(),
-			);
-		};
 		return new ResultAsync(
 			(async () => {
 				// Check if API exists
@@ -139,34 +80,13 @@ namespace Safe {
 				const availability = await LanguageModel.availability();
 
 				return match(availability)
-					.with("unavailable", () => err(unavailableError))
-					.with("downloadable", () =>
-						ok({
-							type: "needs-download" as const,
-							trigger: () => triggerOrViewDownload(availability),
-						}),
-					)
-					.with("downloading", () =>
-						triggerOrViewDownload(availability)
-							.map((instance) => ({
-								type: "initialized" as const,
-								instance,
-							}))
-							.mapErr(
-								(error) =>
-									new Error(
-										`Failed to view download: ${error instanceof Error ? error.message : "Unknown error"}`,
-									),
-							),
-					)
+					.with("unavailable", "downloadable", "downloading", () => err(unavailableError))
 					.with("available", () =>
 						ok({
-							type: "initialized" as const,
-							instance: {
 								systemPrompt,
 								instanceId: crypto.randomUUID(),
 							},
-						}),
+						),
 					)
 					.exhaustive();
 			})(),
@@ -396,24 +316,17 @@ namespace Safe {
  *
  * @see {@link Safe.initialize} for the safe version that returns Result types
  * @param systemPrompt Optional system prompt that will be used for all sessions
- * @param onDownloadProgress Optional callback for download progress
- * @returns A ChromiumAIInstance object or a function to trigger download
+ * @returns A ChromiumAIInstance object
  * @throws {Error} If initialization fails
  *
  * @example
  * const result = await initialize("You are a helpful assistant");
- * if (result.type === 'initialized') {
- *   const ai = result.instance;
- * } else {
- *   // Need to trigger download from user interaction
- *   const ai = await result.trigger();
- * }
+ * const ai = result.instance;
  */
 export async function initialize(
 	systemPrompt?: string,
-	onDownloadProgress?: (progress: number) => void,
-): Promise<InitializeResult> {
-	const result = await Safe.initialize(systemPrompt, onDownloadProgress);
+): Promise<ChromiumAIInstance> {
+	const result = await Safe.initialize(systemPrompt);
 	return okOrThrow(result);
 }
 
@@ -535,14 +448,12 @@ export async function prompt(
  *
  * // Default API (throws errors)
  * const result = await ChromiumAI.initialize("You are helpful");
- * const ai = result.type === 'initialized'
- *   ? result.instance
- *   : await result.trigger();
+ * const ai = result.instance;
  * const response = await ChromiumAI.prompt(ai, "Hello!");
  *
  * // Safe API (returns Results)
  * const result = await ChromiumAI.Safe.initialize("You are helpful");
- * if (result.isOk() && result.value.type === 'initialized') {
+ * if (result.isOk()) {
  *   const response = await ChromiumAI.Safe.prompt(result.value.instance, "Hello!");
  * }
  */

@@ -23,56 +23,40 @@ npm install simple-chromium-ai
 import ChromiumAI from 'simple-chromium-ai';
 
 // Initialize once
-const result = await ChromiumAI.initialize("You are a helpful assistant");
-
-let ai;
-if (result.type === 'initialized') {
-  // Model already available
-  ai = result.instance;
-} else {
-  // Need to trigger download from user interaction (e.g., button click)
-  document.getElementById('download-button').onclick = async () => {
-    ai = await result.trigger();
-  };
-}
+const ai = await ChromiumAI.initialize("You are a helpful assistant");
 
 // Simple prompt
 const response = await ChromiumAI.prompt(ai, "Write a haiku");
 
 // Or use the Safe API for error handling
-const safeResponse = await ChromiumAI.Safe.prompt(ai, "Write a haiku");
-if (safeResponse.isOk()) {
-  console.log(safeResponse.value);
+const safeResult = await ChromiumAI.Safe.initialize("You are a helpful assistant");
+if (safeResult.isOk()) {
+  const ai = safeResult.value;
+  const safeResponse = await ChromiumAI.Safe.prompt(ai, "Write a haiku");
+  if (safeResponse.isOk()) {
+    console.log(safeResponse.value);
+  }
 }
 ```
 
 ## Prerequisites
 
-- Chrome 138+ for extensions
-- Chrome [EPP](https://developer.chrome.com/docs/ai/join-epp) for web
-- Or any supported Chromium Browser
+- Must be called from a browser extension
+- Chrome 138+ or supported Chromium Browser
 - Enable "Prompt API for Gemini Nano" in `chrome://flags`
 - Update "Optimization Guide On Device Model" in `chrome://components`
+- Join Chrome [EPP](https://developer.chrome.com/docs/ai/join-epp) for web
 
 ## Core Functions
 
 ### Initialize
 ```typescript
-const result = await ChromiumAI.initialize(
-  systemPrompt?: string,
-  onDownloadProgress?: (progress: number) => void
+const ai = await ChromiumAI.initialize(
+  systemPrompt?: string
 );
-
-// Result is a tagged union
-if (result.type === 'initialized') {
-  const ai = result.instance;
-} else {
-  // result.type === 'needs-download'
-  const ai = await result.trigger(); // Call from user gesture
-}
 ```
 
-**Important:** Chrome requires user interaction to download the AI model. When the model needs to be downloaded, initialize returns an object with `type: 'needs-download'` and a `trigger` function that you must call from a user gesture (like a button click).
+**Important:** If Chrome AI is not available, downloadable, or downloading, the function will throw an error with instructions on how to enable Chrome AI.
 
 ### Single Prompt
 ```typescript
@@ -122,19 +106,10 @@ if (result.isErr()) {
   return;
 }
 
-const value = result.value;
-if (value.type === 'initialized') {
-  const ai = value.instance;
-  const response = await ChromiumAI.Safe.prompt(ai, "Hello");
-} else {
-  // Need user interaction to download
-  button.onclick = async () => {
-    const aiResult = await value.trigger();
-    if (aiResult.isOk()) {
-      const ai = aiResult.value;
-      const response = await ChromiumAI.Safe.prompt(ai, "Hello");
-    }
-  };
+const ai = result.value;
+const response = await ChromiumAI.Safe.prompt(ai, "Hello");
+if (response.isOk()) {
+  console.log(response.value);
 }
 ```
 
@@ -147,10 +122,7 @@ The wrapper enforces proper initialization through TypeScript:
 await ChromiumAI.prompt("Hello");
 
 // ✅ Correct usage
-const result = await ChromiumAI.initialize("You are helpful");
-const ai = result.type === 'initialized' 
-  ? result.instance 
-  : await result.trigger();
+const ai = await ChromiumAI.initialize("You are helpful");
 await ChromiumAI.prompt(ai, "Hello");
 ```
 
@@ -175,10 +147,6 @@ interface ChromiumAIInstance {
   instanceId: string;
 }
 
-type InitializeResult = 
-  | { type: 'initialized'; instance: ChromiumAIInstance }
-  | { type: 'needs-download'; trigger: () => ResultAsync<ChromiumAIInstance, Error> };
-
 interface TokenUsageInfo {
   promptTokens: number;
   maxTokens: number;
@@ -191,7 +159,7 @@ interface TokenUsageInfo {
 
 | Function | Description | Returns |
 |----------|-------------|---------|
-| `initialize(systemPrompt?, onProgress?)` | Initialize AI with optional system prompt | `InitializeResult` (tagged union) |
+| `initialize(systemPrompt?)` | Initialize AI with optional system prompt | `ChromiumAIInstance` |
 | `prompt(ai, prompt, timeout?)` | Single prompt with optional timeout | `string` |
 | `createSession(ai, options?)` | Create reusable session. Options can override system prompt | `LanguageModel` |
 | `withSession(ai, callback)` | Execute with temporary session | `T` |
@@ -203,64 +171,38 @@ Each function has a `Safe.*` variant that returns `Result<T, Error>` instead of 
 
 ### Basic Chat
 ```javascript
-const result = await ChromiumAI.initialize("You are a friendly assistant");
-const ai = result.type === 'initialized'
-  ? result.instance
-  : await result.trigger(); // Call from user gesture
+const ai = await ChromiumAI.initialize("You are a friendly assistant");
 const response = await ChromiumAI.prompt(ai, "Tell me a joke");
 ```
 
-### With Progress Tracking
+### Error Handling
 ```javascript
-const result = await ChromiumAI.initialize(
-  "You are helpful",
-  (progress) => console.log(`Downloading: ${progress}%`)
-);
-
-if (result.type === 'needs-download') {
-  // Trigger download from user interaction
-  document.getElementById('download-button').onclick = async () => {
-    const ai = await result.trigger();
-    // Use ai...
-  };
+try {
+  const ai = await ChromiumAI.initialize("You are helpful");
+  const response = await ChromiumAI.prompt(ai, "Hello!");
+} catch (error) {
+  console.error('Initialization failed:', error.message);
+  // Error message will include instructions on how to enable Chrome AI
 }
 ```
 
-### Handling Download State
+### Safe API Example
 ```javascript
-// Show/hide button based on model availability
-const button = document.getElementById('download-button');
+// Using the Safe API for better error handling
+const result = await ChromiumAI.Safe.initialize("You are helpful");
 
-try {
-  const result = await ChromiumAI.initialize("You are helpful");
+if (result.isOk()) {
+  const ai = result.value;
+  const promptResult = await ChromiumAI.Safe.prompt(ai, "Hello!");
   
-  if (result.type === 'initialized') {
-    // Model is ready - hide download button
-    button.style.display = 'none';
-    const ai = result.instance;
-    // Use the AI
-    const response = await ChromiumAI.prompt(ai, "Hello!");
+  if (promptResult.isOk()) {
+    console.log('Response:', promptResult.value);
   } else {
-    // Show button - download needed
-    button.style.display = 'block';
-    button.textContent = 'Download AI Model';
-    button.onclick = async () => {
-      button.disabled = true;
-      button.textContent = 'Downloading...';
-      try {
-        const ai = await result.trigger();
-        button.style.display = 'none';
-        // Use the AI
-        const response = await ChromiumAI.prompt(ai, "Hello!");
-      } catch (error) {
-        button.disabled = false;
-        button.textContent = 'Retry Download';
-        console.error('Download failed:', error);
-      }
-    };
+    console.error('Prompt failed:', promptResult.error.message);
   }
-} catch (error) {
-  console.error('Initialization failed:', error);
+} else {
+  console.error('Initialization failed:', result.error.message);
+  // Error message includes instructions on how to enable Chrome AI
 }
 ```
 
