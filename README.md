@@ -48,9 +48,11 @@ if (safeResponse.isOk()) {
 
 ## Prerequisites
 
-1. Chrome 138+ or supported Chromium browser
-2. Enable "Prompt API for Gemini Nano" in `chrome://flags`
-3. Update "Optimization Guide On Device Model" in `chrome://components`
+- Chrome 138+ for extensions
+- Chrome Dev 138+ for web
+- Or any supported Chromium Browser
+- Enable "Prompt API for Gemini Nano" in `chrome://flags`
+- Update "Optimization Guide On Device Model" in `chrome://components`
 
 ## Core Functions
 
