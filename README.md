@@ -30,13 +30,16 @@ const response = await ChromiumAI.prompt(ai, "Write a haiku");
 
 // Or use the Safe API for error handling
 const safeResult = await ChromiumAI.Safe.initialize("You are a helpful assistant");
-if (safeResult.isOk()) {
-  const ai = safeResult.value;
-  const safeResponse = await ChromiumAI.Safe.prompt(ai, "Write a haiku");
-  if (safeResponse.isOk()) {
-    console.log(safeResponse.value);
-  }
-}
+safeResult.match({
+  ok: async (ai) => {
+    const safeResponse = await ChromiumAI.Safe.prompt(ai, "Write a haiku");
+    safeResponse.match({
+      ok: (value) => console.log(value),
+      err: (error) => console.error(error.message)
+    });
+  },
+  err: (error) => console.error(error.message)
+});
 ```
 
 ## Prerequisites
@@ -101,16 +104,19 @@ Every function has a Safe variant that returns Result types instead of throwing:
 import { ChromiumAI } from 'simple-chromium-ai';
 
 const result = await ChromiumAI.Safe.initialize("You are helpful");
-if (result.isErr()) {
-  console.error("Failed:", result.error.message);
-  return;
-}
-
-const ai = result.value;
-const response = await ChromiumAI.Safe.prompt(ai, "Hello");
-if (response.isOk()) {
-  console.log(response.value);
-}
+result.match({
+  ok: async (ai) => {
+    const response = await ChromiumAI.Safe.prompt(ai, "Hello");
+    response.match({
+      ok: (value) => console.log(value),
+      err: (error) => console.error("Prompt failed:", error.message)
+    });
+  },
+  err: (error) => {
+    console.error("Failed:", error.message);
+    return;
+  }
+});
 ```
 
 ## Type Safety
@@ -191,19 +197,19 @@ try {
 // Using the Safe API for better error handling
 const result = await ChromiumAI.Safe.initialize("You are helpful");
 
-if (result.isOk()) {
-  const ai = result.value;
-  const promptResult = await ChromiumAI.Safe.prompt(ai, "Hello!");
-  
-  if (promptResult.isOk()) {
-    console.log('Response:', promptResult.value);
-  } else {
-    console.error('Prompt failed:', promptResult.error.message);
+result.match({
+  ok: async (ai) => {
+    const promptResult = await ChromiumAI.Safe.prompt(ai, "Hello!");
+    promptResult.match({
+      ok: (value) => console.log('Response:', value),
+      err: (error) => console.error('Prompt failed:', error.message)
+    });
+  },
+  err: (error) => {
+    console.error('Initialization failed:', error.message);
+    // Error message includes instructions on how to enable Chrome AI
   }
-} else {
-  console.error('Initialization failed:', result.error.message);
-  // Error message includes instructions on how to enable Chrome AI
-}
+});
 ```
 
 ### Token Checking
