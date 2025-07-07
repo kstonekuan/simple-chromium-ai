@@ -306,7 +306,7 @@ npm run build
 - [Chrome AI Prompt API Documentation](https://developer.chrome.com/docs/ai/prompt-api)
 - [Structured Output with Response Constraints](https://developer.chrome.com/docs/ai/structured-output-for-prompt-api)
 - [W3C Prompt API Specification](https://github.com/webmachinelearning/prompt-api)
-- [Example Applications](https://github.com/kstonekuan/simple-chromium-ai/tree/main/examples)
+- [Example Usage in Squash Browser Memory Extension](https://github.com/kstonekuan/squash-browser-memory)
 
 ## License
 
