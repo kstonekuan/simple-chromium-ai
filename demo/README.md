@@ -36,10 +36,3 @@ npm run dev
 ```
 
 Then load the `dist` folder in Chrome. Changes will hot-reload automatically.
-
-## Files
-
-- `manifest.json` - Extension config
-- `popup.html` - UI
-- `popup.ts` - TypeScript Chrome AI integration using simple-chromium-ai
-- `vite.config.js` - Build configuration with CRXJS
