@@ -49,7 +49,7 @@ if (safeResponse.isOk()) {
 ## Prerequisites
 
 - Chrome 138+ for extensions
-- Chrome Dev 138+ for web
+- Chrome [EPP](https://developer.chrome.com/docs/ai/join-epp) for web
 - Or any supported Chromium Browser
 - Enable "Prompt API for Gemini Nano" in `chrome://flags`
 - Update "Optimization Guide On Device Model" in `chrome://components`
