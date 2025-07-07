@@ -1,6 +1,6 @@
 {
 	"name": "simple-chromium-ai",
-	"version": "0.1.0",
+	"version": "0.1.1",
 	"description": "Simple type-safe wrapper for Chrome's AI Prompt API - trades flexibility for ease of use",
 	"main": "dist/simple-chromium-ai.umd.js",
 	"module": "dist/simple-chromium-ai.mjs",
