@@ -2,6 +2,8 @@
 
 Minimal Chrome extension demonstrating Chrome's built-in AI API using the simple-chromium-ai package.
 
+![Chrome AI Demo Extension](../images/chrome_ai_demo.jpg)
+
 ## Prerequisites
 
 Before using this extension, you need to enable Chrome AI:
