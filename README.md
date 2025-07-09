@@ -47,7 +47,8 @@ safeResult.match(
 - Must be called from a browser extension
 - Chrome 138+ or supported Chromium Browser
 - Enable "Prompt API for Gemini Nano" in `chrome://flags`
-- Update "Optimization Guide On Device Model" in `chrome://components` ⚠️ **Warning: This will download ~22GB**
+- Update "Optimization Guide On Device Model" in `chrome://components`
+  ⚠️ **Warning: This will download ~4GB. See the [hardware requirements](https://developer.chrome.com/docs/ai/get-started#hardware)**
 - Join Chrome [EPP](https://developer.chrome.com/docs/ai/join-epp) for web
 
 ## Core Functions
