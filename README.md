@@ -136,10 +136,7 @@ await ChromiumAI.prompt(ai, "Hello");
 
 This wrapper prioritizes simplicity over flexibility. You cannot:
 
-- Customize model parameters beyond basics
-- Access streaming responses
-- Use advanced session options
-- Control memory/context in detail
+- Access streaming responses (use native `session.promptStreaming()` instead)
 
 For these features, use the [native Chromium AI API](https://developer.chrome.com/docs/ai/prompt-api).
 
@@ -156,20 +153,23 @@ interface ChromiumAIInstance {
 interface TokenUsageInfo {
   promptTokens: number;
   maxTokens: number;
+  tokensSoFar: number;
   tokensAvailable: number;
   willFit: boolean;
 }
 ```
+
+For detailed `promptOptions` and `sessionOptions` types, see [Advanced Types](#advanced-types).
 
 ### All Functions
 
 | Function | Description | Returns |
 |----------|-------------|---------|
 | `initialize(systemPrompt?)` | Initialize AI with optional system prompt | `ChromiumAIInstance` |
-| `prompt(ai, prompt, timeout?)` | Single prompt with optional timeout | `string` |
-| `createSession(ai, options?)` | Create reusable session. Options can override system prompt | `LanguageModel` |
-| `withSession(ai, callback)` | Execute with temporary session | `T` |
-| `checkTokenUsage(ai, prompt)` | Check if prompt fits in context | `TokenUsageInfo` |
+| `prompt(ai, prompt, timeout?, promptOptions?, sessionOptions?)` | Single prompt with optional timeout and options | `string` |
+| `createSession(ai, sessionOptions?)` | Create reusable session with optional session options | `LanguageModel` |
+| `withSession(ai, callback, sessionOptions?)` | Execute with temporary session | `T` |
+| `checkTokenUsage(ai, prompt, sessionOptions?)` | Check if prompt fits in context | `TokenUsageInfo` |
 
 Each function has a `Safe.*` variant that returns `Result<T, Error>` instead of throwing.
 
@@ -274,7 +274,7 @@ try {
     ai, 
     "Write a detailed analysis of quantum computing...",
     undefined, // no timeout
-    { signal: controller.signal } // abort signal
+    { signal: controller.signal } // prompt options with abort signal
   );
   console.log(response);
 } catch (error) {
@@ -299,6 +299,29 @@ cd demo
 npm install
 npm run build
 # Then load the demo folder as an unpacked extension in Chrome
+```
+
+## Advanced Types
+
+For users who need detailed type information for `promptOptions` and `sessionOptions` parameters:
+
+```typescript
+interface LanguageModelPromptOptions {
+  responseConstraint?: Record<string, unknown>;  // JSON schema for structured output
+  omitResponseConstraintInput?: boolean;         // Hide constraint from model input
+  signal?: AbortSignal;                         // Cancel the prompt
+}
+
+interface LanguageModelCreateOptions {
+  topK?: number;                    // Token selection randomness (higher = more random)
+  temperature?: number;             // Output randomness (0.0 = deterministic, 1.0 = very random)
+  expectedInputs?: LanguageModelExpected[];   // Expected input types/languages
+  expectedOutputs?: LanguageModelExpected[];  // Expected output types/languages
+  tools?: LanguageModelTool[];      // Function calling tools (may not be supported yet)
+  signal?: AbortSignal;             // Cancel session creation
+  monitor?: CreateMonitorCallback;  // Monitor session creation progress
+  initialPrompts?: LanguageModelMessage[];    // Override conversation history
+}
 ```
 
 ## Resources
