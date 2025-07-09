@@ -293,6 +293,8 @@ A minimal Chrome extension demo is included in the `demo` folder. It demonstrate
 - Showing setup instructions if not available
 - Simple prompt/response interface using the Safe API
 
+![Chrome AI Demo Extension](images/chrome_ai_demo.jpg)
+
 To run the demo:
 ```bash
 cd demo
