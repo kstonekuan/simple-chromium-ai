@@ -11,7 +11,7 @@ Before using this extension, you need to enable Chrome AI:
 1. Use Chrome 138+ or supported Chromium browser
 2. Enable "Prompt API for Gemini Nano" in `chrome://flags`
 3. Update "Optimization Guide On Device Model" in `chrome://components` 
-   - **Warning: This will download ~22GB**
+   - **Warning: This will download ~4GB**
    - Click "Check for update" next to "Optimization Guide On Device Model"
    - Wait for the download to complete (this may take a while)
 
