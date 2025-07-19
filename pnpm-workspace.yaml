@@ -1,2 +1,6 @@
+packages:
+  - '.'
+  - 'demo'
+
 onlyBuiltDependencies:
   - esbuild
