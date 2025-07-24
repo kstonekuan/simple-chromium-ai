@@ -42,6 +42,25 @@ safeResult.match(
 );
 ```
 
+## Demo Extension
+
+A minimal Chrome extension demo is included in the `demo` folder. It demonstrates:
+- Checking Chrome AI availability
+- Showing setup instructions if not available
+- Simple prompt/response interface using the Safe API
+
+![Chrome AI Demo Extension](images/chrome_ai_demo.jpg)
+
+**[Available on the Chrome Web Store](https://chromewebstore.google.com/detail/fihhgimeakbpnioianlhlejlblefeegn)**
+
+To run the demo locally:
+```bash
+cd demo
+npm install
+npm run build
+# Then load the demo folder as an unpacked extension in Chrome
+```
+
 ## Prerequisites
 
 - Must be called from a browser extension
@@ -140,39 +159,6 @@ This wrapper prioritizes simplicity over flexibility. You cannot:
 - Access streaming responses (use native `session.promptStreaming()` instead)
 
 For these features, use the [native Chromium AI API](https://developer.chrome.com/docs/ai/prompt-api).
-
-## API Reference
-
-### Core Types
-
-```typescript
-interface ChromiumAIInstance {
-  systemPrompt?: string;
-  instanceId: string;
-}
-
-interface TokenUsageInfo {
-  promptTokens: number;
-  maxTokens: number;
-  tokensSoFar: number;
-  tokensAvailable: number;
-  willFit: boolean;
-}
-```
-
-For detailed `promptOptions` and `sessionOptions` types, see [Advanced Types](#advanced-types).
-
-### All Functions
-
-| Function | Description | Returns |
-|----------|-------------|---------|
-| `initialize(systemPrompt?)` | Initialize AI with optional system prompt | `ChromiumAIInstance` |
-| `prompt(ai, prompt, timeout?, promptOptions?, sessionOptions?)` | Single prompt with optional timeout and options | `string` |
-| `createSession(ai, sessionOptions?)` | Create reusable session with optional session options | `LanguageModel` |
-| `withSession(ai, callback, sessionOptions?)` | Execute with temporary session | `T` |
-| `checkTokenUsage(ai, prompt, sessionOptions?)` | Check if prompt fits in context | `TokenUsageInfo` |
-
-Each function has a `Safe.*` variant that returns `Result<T, Error>` instead of throwing.
 
 ## Examples
 
@@ -284,46 +270,6 @@ try {
   } else {
     console.error('Error:', error.message);
   }
-}
-```
-
-## Demo Extension
-
-A minimal Chrome extension demo is included in the `demo` folder. It demonstrates:
-- Checking Chrome AI availability
-- Showing setup instructions if not available
-- Simple prompt/response interface using the Safe API
-
-![Chrome AI Demo Extension](images/chrome_ai_demo.jpg)
-
-To run the demo:
-```bash
-cd demo
-npm install
-npm run build
-# Then load the demo folder as an unpacked extension in Chrome
-```
-
-## Advanced Types
-
-For users who need detailed type information for `promptOptions` and `sessionOptions` parameters:
-
-```typescript
-interface LanguageModelPromptOptions {
-  responseConstraint?: Record<string, unknown>;  // JSON schema for structured output
-  omitResponseConstraintInput?: boolean;         // Hide constraint from model input
-  signal?: AbortSignal;                         // Cancel the prompt
-}
-
-interface LanguageModelCreateOptions {
-  topK?: number;                    // Token selection randomness (higher = more random)
-  temperature?: number;             // Output randomness (0.0 = deterministic, 1.0 = very random)
-  expectedInputs?: LanguageModelExpected[];   // Expected input types/languages
-  expectedOutputs?: LanguageModelExpected[];  // Expected output types/languages
-  tools?: LanguageModelTool[];      // Function calling tools (may not be supported yet)
-  signal?: AbortSignal;             // Cancel session creation
-  monitor?: CreateMonitorCallback;  // Monitor session creation progress
-  initialPrompts?: LanguageModelMessage[];    // Override conversation history
 }
 ```
 
