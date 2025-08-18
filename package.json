@@ -43,7 +43,7 @@
 	},
 	"devDependencies": {
 		"@biomejs/biome": "2.2.0",
-		"@types/node": "24.2.1",
+		"@types/node": "24.3.0",
 		"ts-pattern": "5.8.0",
 		"typescript": "5.9.2",
 		"vite": "7.1.2",
