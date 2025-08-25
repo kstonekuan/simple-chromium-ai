@@ -42,7 +42,7 @@
 		"neverthrow": "8.2.0"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "2.2.0",
+		"@biomejs/biome": "2.2.2",
 		"@types/node": "24.3.0",
 		"ts-pattern": "5.8.0",
 		"typescript": "5.9.2",
