@@ -82,18 +82,15 @@ export function createSession(
 					...options,
 				};
 
-				if (instance.systemPrompt) {
-					const systemMessage: LanguageModelSystemMessage = {
-						role: "system" as LanguageModelSystemMessageRole,
-						content: instance.systemPrompt,
-					};
-					// Always use our system message as the first prompt
-					mergedOptions.initialPrompts = [systemMessage];
-				}
-
-				// If options has initial prompts, override the system prompt
 				if (options?.initialPrompts && options.initialPrompts.length > 0) {
 					mergedOptions.initialPrompts = options.initialPrompts;
+				} else if (instance.systemPrompt) {
+					mergedOptions.initialPrompts = [
+						{
+							role: "system" as LanguageModelSystemMessageRole,
+							content: instance.systemPrompt,
+						},
+					];
 				}
 
 				const session = await LanguageModel.create(mergedOptions);
