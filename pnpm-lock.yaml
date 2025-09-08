@@ -44,14 +44,14 @@ importers:
         specifier: 2.2.0
         version: 2.2.0
       '@types/node':
-        specifier: 24.3.0
-        version: 24.3.0
+        specifier: 24.3.1
+        version: 24.3.1
       typescript:
         specifier: 5.9.2
         version: 5.9.2
       vite:
         specifier: 7.1.3
-        version: 7.1.3(@types/node@24.3.0)(jiti@2.4.2)
+        version: 7.1.3(@types/node@24.3.1)(jiti@2.4.2)
 
 packages:
 
@@ -460,9 +460,6 @@ packages:
 
   '@types/estree@1.0.8':
     resolution: {integrity: sha512-dWHzHa2WqEXI/O1E9OjrocMTKJl2mSrEolh1Iomrv6U+JuNwaHXsXx9bLu5gG7BUWFIN0skIQJQ/L1rIex4X6w==}
-
-  '@types/node@24.3.0':
-    resolution: {integrity: sha512-aPTXCrfwnDLj4VvXrm+UUCQjNEvJgNA8s5F1cvwQU+3KNltTOkBm1j30uNLyqqPNe7gE3KFzImYoZEfLhp4Yow==}
 
   '@types/node@24.3.1':
     resolution: {integrity: sha512-3vXmQDXy+woz+gnrTvuvNrPzekOi+Ds0ReMxw0LzBiK3a+1k0kQn9f2NWk+lgD4rJehFUmYy2gMhJ2ZI+7YP9g==}
@@ -1366,10 +1363,6 @@ snapshots:
 
   '@types/estree@1.0.8': {}
 
-  '@types/node@24.3.0':
-    dependencies:
-      undici-types: 7.10.0
-
   '@types/node@24.3.1':
     dependencies:
       undici-types: 7.10.0
@@ -1904,7 +1897,7 @@ snapshots:
       - rollup
       - supports-color
 
-  vite@7.1.3(@types/node@24.3.0)(jiti@2.4.2):
+  vite@7.1.3(@types/node@24.3.1)(jiti@2.4.2):
     dependencies:
       esbuild: 0.25.9
       fdir: 6.5.0(picomatch@4.0.3)
@@ -1913,7 +1906,7 @@ snapshots:
       rollup: 4.48.1
       tinyglobby: 0.2.14
     optionalDependencies:
-      '@types/node': 24.3.0
+      '@types/node': 24.3.1
       fsevents: 2.3.3
       jiti: 2.4.2
 
