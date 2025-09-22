@@ -46,7 +46,7 @@
 		"@types/node": "24.4.0",
 		"ts-pattern": "5.8.0",
 		"typescript": "5.9.2",
-		"vite": "7.1.4",
+		"vite": "7.1.7",
 		"vite-plugin-dts": "4.5.4"
 	}
 }
