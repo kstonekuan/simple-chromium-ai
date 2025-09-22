@@ -68,7 +68,37 @@ npm run build
 - Enable "Prompt API for Gemini Nano" in `chrome://flags`
 - Update "Optimization Guide On Device Model" in `chrome://components`
   ⚠️ **Warning: This will download ~4GB. See the [hardware requirements](https://developer.chrome.com/docs/ai/get-started#hardware)**
-- Join Chrome [EPP](https://developer.chrome.com/docs/ai/join-epp) for web
+- Join Chrome [EPP](https://developer.chrome.com/docs/ai/join-epp) for web (non-extension) use
+
+## Troubleshooting
+
+If you're experiencing issues with Chrome AI not being available, try these debugging steps:
+
+### Check Chrome AI Status
+
+1. **Check the internal status page:**
+   Navigate to `chrome://on-device-internals/` to see the current model status
+
+2. **Check availability in console:**
+   Open Chrome DevTools console and run:
+   ```javascript
+   await LanguageModel.availability()
+   ```
+   This should return one of: `"available"`, `"downloadable"`, `"downloading"`, or `"unavailable"`
+
+### Trigger Model Download
+
+If the status shows `"downloadable"`, you may need to trigger the model download in the console with this script from the [official docs](https://developer.chrome.com/docs/ai/prompt-api#use_the_prompt_api):
+
+```javascript
+await LanguageModel.create({
+  monitor(m) {
+    m.addEventListener('downloadprogress', (e) => {
+      console.log(`Downloaded ${e.loaded * 100}%`);
+    });
+  },
+});
+```
 
 ## Core Functions
 

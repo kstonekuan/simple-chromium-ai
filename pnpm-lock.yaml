@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       '@types/dom-chromium-ai':
-        specifier: 0.0.9
-        version: 0.0.9
+        specifier: 0.0.10
+        version: 0.0.10
       neverthrow:
         specifier: 8.2.0
         version: 8.2.0
@@ -19,8 +19,8 @@ importers:
         specifier: 2.2.4
         version: 2.2.4
       '@types/node':
-        specifier: 24.4.0
-        version: 24.4.0
+        specifier: 24.5.2
+        version: 24.5.2
       ts-pattern:
         specifier: 5.8.0
         version: 5.8.0
@@ -28,30 +28,30 @@ importers:
         specifier: 5.9.2
         version: 5.9.2
       vite:
-        specifier: 7.1.4
-        version: 7.1.4(@types/node@24.4.0)(jiti@2.4.2)
+        specifier: 7.1.7
+        version: 7.1.7(@types/node@24.5.2)(jiti@2.4.2)
       vite-plugin-dts:
         specifier: 4.5.4
-        version: 4.5.4(@types/node@24.4.0)(rollup@4.48.1)(typescript@5.9.2)(vite@7.1.4(@types/node@24.4.0)(jiti@2.4.2))
+        version: 4.5.4(@types/node@24.5.2)(rollup@4.48.1)(typescript@5.9.2)(vite@7.1.7(@types/node@24.5.2)(jiti@2.4.2))
 
   demo:
     dependencies:
       simple-chromium-ai:
-        specifier: 0.1.1
-        version: 0.1.1
+        specifier: 0.1.3
+        version: 0.1.3
     devDependencies:
       '@crxjs/vite-plugin':
         specifier: 2.2.0
         version: 2.2.0
       '@types/node':
-        specifier: 24.4.0
-        version: 24.4.0
+        specifier: 24.5.2
+        version: 24.5.2
       typescript:
         specifier: 5.9.2
         version: 5.9.2
       vite:
-        specifier: 7.1.3
-        version: 7.1.3(@types/node@24.4.0)(jiti@2.4.2)
+        specifier: 7.1.7
+        version: 7.1.7(@types/node@24.5.2)(jiti@2.4.2)
 
 packages:
 
@@ -455,14 +455,17 @@ packages:
   '@types/argparse@1.0.38':
     resolution: {integrity: sha512-ebDJ9b0e702Yr7pWgB0jzm+CX4Srzz8RcXtLJDJB+BSccqMa36uyH/zUsSYao5+BD1ytv3k3rPYCq4mAE1hsXA==}
 
+  '@types/dom-chromium-ai@0.0.10':
+    resolution: {integrity: sha512-9CSfOOIx6/pyOjsp6VTtai18Bjh0mS2XWwiXn7/rBJIxX1Y/1onJe+1MqPVo6bsEUE3rZlxQHEAg1yRKRFTkWg==}
+
   '@types/dom-chromium-ai@0.0.9':
     resolution: {integrity: sha512-wZNak+04m29hwXqtnDqNUl3TGcU9pvWhemtBpVtN2TKnWQKprJ8KQjaldbMVfdL44UHnUfv9V51rRh7tV8HY7w==}
 
   '@types/estree@1.0.8':
     resolution: {integrity: sha512-dWHzHa2WqEXI/O1E9OjrocMTKJl2mSrEolh1Iomrv6U+JuNwaHXsXx9bLu5gG7BUWFIN0skIQJQ/L1rIex4X6w==}
 
-  '@types/node@24.4.0':
-    resolution: {integrity: sha512-gUuVEAK4/u6F9wRLznPUU4WGUacSEBDPoC2TrBkw3GAnOLHBL45QdfHOXp1kJ4ypBGLxTOB+t7NJLpKoC3gznQ==}
+  '@types/node@24.5.2':
+    resolution: {integrity: sha512-FYxk1I7wPv3K2XBaoyH2cTnocQEu8AOZ60hPbsyukMPLv5/5qr7V1i8PLHdl6Zf87I+xZXFvPCXYjiTFq+YSDQ==}
 
   '@volar/language-core@2.4.17':
     resolution: {integrity: sha512-chmRZMbKmcGpKMoO7Reb70uiLrzo0KWC2CkFttKUuKvrE+VYgi+fL9vWMJ07Fv5ulX0V1TAyyacN9q3nc5/ecA==}
@@ -874,8 +877,8 @@ packages:
     engines: {node: '>=10'}
     hasBin: true
 
-  simple-chromium-ai@0.1.1:
-    resolution: {integrity: sha512-WsHWvXugfhkPGCiWiRJcNlO8vVug5uPkspzuxxTkDZ/9FZpj8OuCPMCqMhSSODYTMeH898EUJJ9gdFE1tp42iQ==}
+  simple-chromium-ai@0.1.3:
+    resolution: {integrity: sha512-+8IoooTrmqxtVXZdGiDyMHbk3Uhlx5FBDt0DkUqM4r3WW6KFnYeUXTmkBvl259lEfn3nveoSby7FnmUoybtVRQ==}
     engines: {node: '>=14.0.0'}
 
   source-map-js@1.2.1:
@@ -905,8 +908,8 @@ packages:
     resolution: {integrity: sha512-ot0WnXS9fgdkgIcePe6RHNk1WA8+muPa6cSjeR3V8K27q9BB1rTE3R1p7Hv0z1ZyAc8s6Vvv8DIyWf681MAt0w==}
     engines: {node: '>= 0.4'}
 
-  tinyglobby@0.2.14:
-    resolution: {integrity: sha512-tX5e7OM1HnYr2+a2C/4V0htOcSQcoSTH9KgJnVvNm5zm/cyEWKJ7j7YutsH9CxMdtOkkLFy2AHrMci9IM8IPZQ==}
+  tinyglobby@0.2.15:
+    resolution: {integrity: sha512-j2Zq4NyQYG5XMST4cbs02Ak8iJUdxRM0XI5QyxXuZOzKOINmWurp3smXu3y5wDcJrptwpSjgXHzIQxR0omXljQ==}
     engines: {node: '>=12.0.0'}
 
   to-regex-range@5.0.1:
@@ -932,8 +935,8 @@ packages:
   ufo@1.6.1:
     resolution: {integrity: sha512-9a4/uxlTWJ4+a5i0ooc1rU7C7YOw3wT+UGqdeNNHWnOF9qcMBgLRS+4IYUqbczewFx4mLEig6gawh7X6mFlEkA==}
 
-  undici-types@7.11.0:
-    resolution: {integrity: sha512-kt1ZriHTi7MU+Z/r9DOdAI3ONdaR3M3csEaRc6ewa4f4dTvX4cQCbJ4NkEn0ohE4hHtq85+PhPSTY+pO/1PwgA==}
+  undici-types@7.12.0:
+    resolution: {integrity: sha512-goOacqME2GYyOZZfb5Lgtu+1IDmAlAEu5xnD3+xTzS10hT0vzpf0SPjkXwAw9Jm+4n/mQGDP3LO8CPbYROeBfQ==}
 
   undici@7.14.0:
     resolution: {integrity: sha512-Vqs8HTzjpQXZeXdpsfChQTlafcMQaaIwnGwLam1wudSSjlJeQ3bw1j+TLPePgrCnCpUXx7Ba5Pdpf5OBih62NQ==}
@@ -955,48 +958,8 @@ packages:
       vite:
         optional: true
 
-  vite@7.1.3:
-    resolution: {integrity: sha512-OOUi5zjkDxYrKhTV3V7iKsoS37VUM7v40+HuwEmcrsf11Cdx9y3DIr2Px6liIcZFwt3XSRpQvFpL3WVy7ApkGw==}
-    engines: {node: ^20.19.0 || >=22.12.0}
-    hasBin: true
-    peerDependencies:
-      '@types/node': ^20.19.0 || >=22.12.0
-      jiti: '>=1.21.0'
-      less: ^4.0.0
-      lightningcss: ^1.21.0
-      sass: ^1.70.0
-      sass-embedded: ^1.70.0
-      stylus: '>=0.54.8'
-      sugarss: ^5.0.0
-      terser: ^5.16.0
-      tsx: ^4.8.1
-      yaml: ^2.4.2
-    peerDependenciesMeta:
-      '@types/node':
-        optional: true
-      jiti:
-        optional: true
-      less:
-        optional: true
-      lightningcss:
-        optional: true
-      sass:
-        optional: true
-      sass-embedded:
-        optional: true
-      stylus:
-        optional: true
-      sugarss:
-        optional: true
-      terser:
-        optional: true
-      tsx:
-        optional: true
-      yaml:
-        optional: true
-
-  vite@7.1.4:
-    resolution: {integrity: sha512-X5QFK4SGynAeeIt+A7ZWnApdUyHYm+pzv/8/A57LqSGcI88U6R6ipOs3uCesdc6yl7nl+zNO0t8LmqAdXcQihw==}
+  vite@7.1.7:
+    resolution: {integrity: sha512-VbA8ScMvAISJNJVbRDTJdCwqQoAareR/wutevKanhR2/1EkoXVZVkkORaYm/tNVCjP/UDTKtcw3bAkwOUdedmA==}
     engines: {node: ^20.19.0 || >=22.12.0}
     hasBin: true
     peerDependencies:
@@ -1200,23 +1163,23 @@ snapshots:
 
   '@jridgewell/sourcemap-codec@1.5.5': {}
 
-  '@microsoft/api-extractor-model@7.30.6(@types/node@24.4.0)':
+  '@microsoft/api-extractor-model@7.30.6(@types/node@24.5.2)':
     dependencies:
       '@microsoft/tsdoc': 0.15.1
       '@microsoft/tsdoc-config': 0.17.1
-      '@rushstack/node-core-library': 5.13.1(@types/node@24.4.0)
+      '@rushstack/node-core-library': 5.13.1(@types/node@24.5.2)
     transitivePeerDependencies:
       - '@types/node'
 
-  '@microsoft/api-extractor@7.52.8(@types/node@24.4.0)':
+  '@microsoft/api-extractor@7.52.8(@types/node@24.5.2)':
     dependencies:
-      '@microsoft/api-extractor-model': 7.30.6(@types/node@24.4.0)
+      '@microsoft/api-extractor-model': 7.30.6(@types/node@24.5.2)
       '@microsoft/tsdoc': 0.15.1
       '@microsoft/tsdoc-config': 0.17.1
-      '@rushstack/node-core-library': 5.13.1(@types/node@24.4.0)
+      '@rushstack/node-core-library': 5.13.1(@types/node@24.5.2)
       '@rushstack/rig-package': 0.5.3
-      '@rushstack/terminal': 0.15.3(@types/node@24.4.0)
-      '@rushstack/ts-command-line': 5.0.1(@types/node@24.4.0)
+      '@rushstack/terminal': 0.15.3(@types/node@24.5.2)
+      '@rushstack/ts-command-line': 5.0.1(@types/node@24.5.2)
       lodash: 4.17.21
       minimatch: 3.0.8
       resolve: 1.22.10
@@ -1323,7 +1286,7 @@ snapshots:
   '@rollup/rollup-win32-x64-msvc@4.48.1':
     optional: true
 
-  '@rushstack/node-core-library@5.13.1(@types/node@24.4.0)':
+  '@rushstack/node-core-library@5.13.1(@types/node@24.5.2)':
     dependencies:
       ajv: 8.13.0
       ajv-draft-04: 1.0.0(ajv@8.13.0)
@@ -1334,23 +1297,23 @@ snapshots:
       resolve: 1.22.10
       semver: 7.5.4
     optionalDependencies:
-      '@types/node': 24.4.0
+      '@types/node': 24.5.2
 
   '@rushstack/rig-package@0.5.3':
     dependencies:
       resolve: 1.22.10
       strip-json-comments: 3.1.1
 
-  '@rushstack/terminal@0.15.3(@types/node@24.4.0)':
+  '@rushstack/terminal@0.15.3(@types/node@24.5.2)':
     dependencies:
-      '@rushstack/node-core-library': 5.13.1(@types/node@24.4.0)
+      '@rushstack/node-core-library': 5.13.1(@types/node@24.5.2)
       supports-color: 8.1.1
     optionalDependencies:
-      '@types/node': 24.4.0
+      '@types/node': 24.5.2
 
-  '@rushstack/ts-command-line@5.0.1(@types/node@24.4.0)':
+  '@rushstack/ts-command-line@5.0.1(@types/node@24.5.2)':
     dependencies:
-      '@rushstack/terminal': 0.15.3(@types/node@24.4.0)
+      '@rushstack/terminal': 0.15.3(@types/node@24.5.2)
       '@types/argparse': 1.0.38
       argparse: 1.0.10
       string-argv: 0.3.2
@@ -1359,13 +1322,15 @@ snapshots:
 
   '@types/argparse@1.0.38': {}
 
+  '@types/dom-chromium-ai@0.0.10': {}
+
   '@types/dom-chromium-ai@0.0.9': {}
 
   '@types/estree@1.0.8': {}
 
-  '@types/node@24.4.0':
+  '@types/node@24.5.2':
     dependencies:
-      undici-types: 7.11.0
+      undici-types: 7.12.0
 
   '@volar/language-core@2.4.17':
     dependencies:
@@ -1828,7 +1793,7 @@ snapshots:
     dependencies:
       lru-cache: 6.0.0
 
-  simple-chromium-ai@0.1.1:
+  simple-chromium-ai@0.1.3:
     dependencies:
       '@types/dom-chromium-ai': 0.0.9
       neverthrow: 8.2.0
@@ -1849,7 +1814,7 @@ snapshots:
 
   supports-preserve-symlinks-flag@1.0.0: {}
 
-  tinyglobby@0.2.14:
+  tinyglobby@0.2.15:
     dependencies:
       fdir: 6.5.0(picomatch@4.0.3)
       picomatch: 4.0.3
@@ -1868,7 +1833,7 @@ snapshots:
 
   ufo@1.6.1: {}
 
-  undici-types@7.11.0: {}
+  undici-types@7.12.0: {}
 
   undici@7.14.0: {}
 
@@ -1878,9 +1843,9 @@ snapshots:
     dependencies:
       punycode: 2.3.1
 
-  vite-plugin-dts@4.5.4(@types/node@24.4.0)(rollup@4.48.1)(typescript@5.9.2)(vite@7.1.4(@types/node@24.4.0)(jiti@2.4.2)):
+  vite-plugin-dts@4.5.4(@types/node@24.5.2)(rollup@4.48.1)(typescript@5.9.2)(vite@7.1.7(@types/node@24.5.2)(jiti@2.4.2)):
     dependencies:
-      '@microsoft/api-extractor': 7.52.8(@types/node@24.4.0)
+      '@microsoft/api-extractor': 7.52.8(@types/node@24.5.2)
       '@rollup/pluginutils': 5.2.0(rollup@4.48.1)
       '@volar/typescript': 2.4.17
       '@vue/language-core': 2.2.0(typescript@5.9.2)
@@ -1891,35 +1856,22 @@ snapshots:
       magic-string: 0.30.17
       typescript: 5.9.2
     optionalDependencies:
-      vite: 7.1.4(@types/node@24.4.0)(jiti@2.4.2)
+      vite: 7.1.7(@types/node@24.5.2)(jiti@2.4.2)
     transitivePeerDependencies:
       - '@types/node'
       - rollup
       - supports-color
 
-  vite@7.1.3(@types/node@24.4.0)(jiti@2.4.2):
+  vite@7.1.7(@types/node@24.5.2)(jiti@2.4.2):
     dependencies:
       esbuild: 0.25.9
       fdir: 6.5.0(picomatch@4.0.3)
       picomatch: 4.0.3
       postcss: 8.5.6
       rollup: 4.48.1
-      tinyglobby: 0.2.14
+      tinyglobby: 0.2.15
     optionalDependencies:
-      '@types/node': 24.4.0
-      fsevents: 2.3.3
-      jiti: 2.4.2
-
-  vite@7.1.4(@types/node@24.4.0)(jiti@2.4.2):
-    dependencies:
-      esbuild: 0.25.9
-      fdir: 6.5.0(picomatch@4.0.3)
-      picomatch: 4.0.3
-      postcss: 8.5.6
-      rollup: 4.48.1
-      tinyglobby: 0.2.14
-    optionalDependencies:
-      '@types/node': 24.4.0
+      '@types/node': 24.5.2
       fsevents: 2.3.3
       jiti: 2.4.2
 
