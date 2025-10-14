@@ -25,14 +25,14 @@ importers:
         specifier: 5.8.0
         version: 5.8.0
       typescript:
-        specifier: 5.9.2
-        version: 5.9.2
+        specifier: 5.9.3
+        version: 5.9.3
       vite:
         specifier: 7.1.9
         version: 7.1.9(@types/node@24.7.2)(jiti@2.4.2)
       vite-plugin-dts:
         specifier: 4.5.4
-        version: 4.5.4(@types/node@24.7.2)(rollup@4.52.4)(typescript@5.9.2)(vite@7.1.9(@types/node@24.7.2)(jiti@2.4.2))
+        version: 4.5.4(@types/node@24.7.2)(rollup@4.52.4)(typescript@5.9.3)(vite@7.1.9(@types/node@24.7.2)(jiti@2.4.2))
 
   demo:
     dependencies:
@@ -47,8 +47,8 @@ importers:
         specifier: 24.7.2
         version: 24.7.2
       typescript:
-        specifier: 5.9.2
-        version: 5.9.2
+        specifier: 5.9.3
+        version: 5.9.3
       vite:
         specifier: 7.1.9
         version: 7.1.9(@types/node@24.7.2)(jiti@2.4.2)
@@ -937,8 +937,8 @@ packages:
     engines: {node: '>=14.17'}
     hasBin: true
 
-  typescript@5.9.2:
-    resolution: {integrity: sha512-CWBzXQrc/qOkhidw1OzBTQuYRbfyxDXJMVJ1XNwUHGROVmuaeiEm3OslpZ1RV96d7SKKjZKrSJu3+t/xlw3R9A==}
+  typescript@5.9.3:
+    resolution: {integrity: sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw==}
     engines: {node: '>=14.17'}
     hasBin: true
 
@@ -1378,7 +1378,7 @@ snapshots:
       de-indent: 1.0.2
       he: 1.2.0
 
-  '@vue/language-core@2.2.0(typescript@5.9.2)':
+  '@vue/language-core@2.2.0(typescript@5.9.3)':
     dependencies:
       '@volar/language-core': 2.4.17
       '@vue/compiler-dom': 3.5.17
@@ -1389,7 +1389,7 @@ snapshots:
       muggle-string: 0.4.1
       path-browserify: 1.0.1
     optionalDependencies:
-      typescript: 5.9.2
+      typescript: 5.9.3
 
   '@vue/shared@3.5.17': {}
 
@@ -1847,7 +1847,7 @@ snapshots:
 
   typescript@5.8.2: {}
 
-  typescript@5.9.2: {}
+  typescript@5.9.3: {}
 
   ufo@1.6.1: {}
 
@@ -1861,18 +1861,18 @@ snapshots:
     dependencies:
       punycode: 2.3.1
 
-  vite-plugin-dts@4.5.4(@types/node@24.7.2)(rollup@4.52.4)(typescript@5.9.2)(vite@7.1.9(@types/node@24.7.2)(jiti@2.4.2)):
+  vite-plugin-dts@4.5.4(@types/node@24.7.2)(rollup@4.52.4)(typescript@5.9.3)(vite@7.1.9(@types/node@24.7.2)(jiti@2.4.2)):
     dependencies:
       '@microsoft/api-extractor': 7.52.8(@types/node@24.7.2)
       '@rollup/pluginutils': 5.2.0(rollup@4.52.4)
       '@volar/typescript': 2.4.17
-      '@vue/language-core': 2.2.0(typescript@5.9.2)
+      '@vue/language-core': 2.2.0(typescript@5.9.3)
       compare-versions: 6.1.1
       debug: 4.4.1
       kolorist: 1.8.0
       local-pkg: 1.1.1
       magic-string: 0.30.17
-      typescript: 5.9.2
+      typescript: 5.9.3
     optionalDependencies:
       vite: 7.1.9(@types/node@24.7.2)(jiti@2.4.2)
     transitivePeerDependencies:
