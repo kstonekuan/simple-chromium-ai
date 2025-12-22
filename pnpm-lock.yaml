@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       '@types/dom-chromium-ai':
-        specifier: 0.0.11
-        version: 0.0.11
+        specifier: 0.0.13
+        version: 0.0.13
       neverthrow:
         specifier: 8.2.0
         version: 8.2.0
@@ -465,8 +465,8 @@ packages:
   '@types/argparse@1.0.38':
     resolution: {integrity: sha512-ebDJ9b0e702Yr7pWgB0jzm+CX4Srzz8RcXtLJDJB+BSccqMa36uyH/zUsSYao5+BD1ytv3k3rPYCq4mAE1hsXA==}
 
-  '@types/dom-chromium-ai@0.0.11':
-    resolution: {integrity: sha512-Li04Mac9ic1vbX/te9re8v1010fh5YB/30dMcJLpIuIyDoT7xE/dIdg9r9UrFZLs5Ztmonb3nP7+LhPpFuHBGw==}
+  '@types/dom-chromium-ai@0.0.13':
+    resolution: {integrity: sha512-m+CAxlofdsZpP3QVhY9Ys4yUMyRRDfs5kmx+DYywKhNpn9Q6Nt8Gtn3/ayK/rjiHJRY8QJwiNHD6LG55JWibdA==}
 
   '@types/dom-chromium-ai@0.0.9':
     resolution: {integrity: sha512-wZNak+04m29hwXqtnDqNUl3TGcU9pvWhemtBpVtN2TKnWQKprJ8KQjaldbMVfdL44UHnUfv9V51rRh7tV8HY7w==}
@@ -1350,7 +1350,7 @@ snapshots:
 
   '@types/argparse@1.0.38': {}
 
-  '@types/dom-chromium-ai@0.0.11': {}
+  '@types/dom-chromium-ai@0.0.13': {}
 
   '@types/dom-chromium-ai@0.0.9': {}
 
