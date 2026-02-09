@@ -12,7 +12,9 @@
 	],
 	"scripts": {
 		"build": "vite build",
-		"check": "biome check --write && tsc --noEmit",
+		"lint": "biome check --write .",
+		"typecheck": "tsc --noEmit",
+		"check": "pnpm run lint && pnpm run typecheck",
 		"prepublishOnly": "pnpm run check && pnpm run build"
 	},
 	"keywords": [
@@ -38,12 +40,12 @@
 		"node": ">=14.0.0"
 	},
 	"dependencies": {
-		"@types/dom-chromium-ai": "0.0.13",
+		"@types/dom-chromium-ai": "0.0.14",
 		"neverthrow": "8.2.0"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "2.3.11",
-		"@types/node": "25.0.9",
+		"@biomejs/biome": "2.3.14",
+		"@types/node": "25.2.2",
 		"ts-pattern": "5.9.0",
 		"typescript": "5.9.3",
 		"vite": "7.3.1",
