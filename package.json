@@ -45,7 +45,7 @@
 	},
 	"devDependencies": {
 		"@biomejs/biome": "2.4.4",
-		"@types/node": "25.3.3",
+		"@types/node": "25.3.5",
 		"ts-pattern": "5.9.0",
 		"typescript": "5.9.3",
 		"vite": "7.3.1",
