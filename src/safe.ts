@@ -210,7 +210,7 @@ export function prompt(
 	return withSession(
 		instance,
 		(session) => {
-			let timeoutId: NodeJS.Timeout | null = null;
+			let timeoutId: ReturnType<typeof setTimeout> | null = null;
 
 			return ResultAsync.fromPromise(
 				(async () => {
