@@ -40,7 +40,7 @@
 		"node": ">=14.0.0"
 	},
 	"dependencies": {
-		"@types/dom-chromium-ai": "0.0.15",
+		"@types/dom-chromium-ai": "0.0.16",
 		"neverthrow": "8.2.0"
 	},
 	"devDependencies": {
