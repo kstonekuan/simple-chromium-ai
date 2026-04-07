@@ -1,6 +1,7 @@
 /// <reference types="@types/dom-chromium-ai" />
 
 import * as Safe from "./summarizer-safe";
+import type { InputUsageInfo } from "./types";
 import { okOrThrow } from "./utils";
 
 /**
@@ -36,5 +37,22 @@ export async function summarize(
 	summarizeOptions?: SummarizerSummarizeOptions,
 ): Promise<string> {
 	const result = await Safe.summarize(text, createOptions, summarizeOptions);
+	return okOrThrow(result);
+}
+
+/**
+ * Checks input usage for a summarization request without performing it.
+ * @throws {Error} If input usage check fails
+ */
+export async function checkInputUsage(
+	input: string,
+	createOptions?: SummarizerCreateOptions,
+	summarizeOptions?: SummarizerSummarizeOptions,
+): Promise<InputUsageInfo> {
+	const result = await Safe.checkInputUsage(
+		input,
+		createOptions,
+		summarizeOptions,
+	);
 	return okOrThrow(result);
 }
