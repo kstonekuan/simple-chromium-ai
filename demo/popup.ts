@@ -65,7 +65,7 @@ async function init() {
 			if (interfaceEl) interfaceEl.style.display = "block";
 		},
 		(error) => {
-			if (statusEl) statusEl.innerHTML = error.message.replace(/\n/g, "<br>");
+			if (statusEl) statusEl.textContent = `Error: ${error.message}`;
 		},
 	);
 }
