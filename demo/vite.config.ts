@@ -1,20 +1,32 @@
-import { crx } from "@crxjs/vite-plugin";
+import { copyFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { defineConfig, type Plugin } from "vite";
-import manifest from "./manifest.json";
 
-// Chrome extensions serve local files without MIME headers;
-// the crossorigin attribute forces a CORS fetch that breaks module loading.
-function stripCrossorigin(): Plugin {
+function copyStatic(): Plugin {
 	return {
-		name: "strip-crossorigin",
-		enforce: "post",
-		transformIndexHtml(html) {
-			return html.replace(/ crossorigin/g, "");
+		name: "copy-static",
+		writeBundle() {
+			copyFileSync(
+				resolve(__dirname, "manifest.json"),
+				resolve(__dirname, "dist/manifest.json"),
+			);
+			copyFileSync(
+				resolve(__dirname, "popup.html"),
+				resolve(__dirname, "dist/popup.html"),
+			);
 		},
 	};
 }
 
 export default defineConfig({
-	base: "",
-	plugins: [crx({ manifest }), stripCrossorigin()],
+	plugins: [copyStatic()],
+	build: {
+		outDir: "dist",
+		lib: {
+			entry: resolve(__dirname, "popup.ts"),
+			name: "popup",
+			formats: ["iife"],
+			fileName: () => "popup.js",
+		},
+	},
 });
