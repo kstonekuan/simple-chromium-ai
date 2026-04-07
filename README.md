@@ -19,21 +19,23 @@ npm install simple-chromium-ai
 ```
 
 ```javascript
-import { translate, detect, summarize } from 'simple-chromium-ai';
+import { prompt, translate, detect, summarize } from 'simple-chromium-ai';
 
-// These just work — no initialization needed
+// One-shot functions — no initialization needed
+const response = await prompt("Write a haiku", { systemPrompt: "You are a poet" });
 const translated = await translate("Hello", { sourceLanguage: "en", targetLanguage: "es" });
 const detections = await detect("Bonjour le monde");
 const summary = await summarize("Long article...", { type: "tldr" });
 ```
 
-The Prompt API requires initialization since it manages session state:
+For reusable instances with shared config:
 
 ```javascript
-import ChromiumAI from 'simple-chromium-ai';
+import { Prompt } from 'simple-chromium-ai';
 
-const ai = await ChromiumAI.initialize("You are a helpful assistant");
-const response = await ChromiumAI.prompt(ai, "Write a haiku");
+const ai = await Prompt.create({ systemPrompt: "You are a helpful assistant" });
+const response = await ai.prompt("Write a haiku");
+ai.destroy();
 ```
 
 ## Prerequisites
@@ -44,51 +46,57 @@ const response = await ChromiumAI.prompt(ai, "Write a haiku");
 
 ## Prompt API
 
-The Prompt API requires initializing an instance with a system prompt. The instance is then passed to all subsequent calls.
+### One-Shot
 
-### Initialize
 ```typescript
-const ai = await ChromiumAI.initialize(
-  systemPrompt?: string,
-  expectedOutputLanguages?: string[] // defaults to ["en"]
-);
+import { prompt } from 'simple-chromium-ai';
+
+const response = await prompt("Write a haiku", {
+  systemPrompt: "You are a poet",
+  timeout: 5000,
+});
 ```
 
-The `expectedOutputLanguages` parameter tells Chrome what language(s) the model should output.
+### Reusable Instance
 
-### Prompt
+For multiple prompts with the same config, create an instance:
+
 ```typescript
-const response = await ChromiumAI.prompt(
-  ai,
-  "Your prompt",
-  timeout?: number,
-  promptOptions?: LanguageModelPromptOptions, // signal, responseConstraint, etc.
-  sessionOptions?: LanguageModelCreateOptions
-);
+import { Prompt } from 'simple-chromium-ai';
+
+const ai = await Prompt.create({
+  systemPrompt: "You are a helpful assistant",
+  expectedOutputLanguages: ["en"], // defaults to ["en"]
+});
+
+const response1 = await ai.prompt("Write a haiku");
+const response2 = await ai.prompt("Write another");
+ai.destroy();
 ```
 
 ### Session Management
+
 ```typescript
 // Create reusable session (maintains conversation context)
-const session = await ChromiumAI.createSession(ai);
+const session = await ai.createSession();
 const response1 = await session.prompt("Hello");
 const response2 = await session.prompt("Follow up");
 session.destroy();
 
 // Override the instance's system prompt for this session
-const customSession = await ChromiumAI.createSession(ai, {
+const customSession = await ai.createSession({
   initialPrompts: [{ role: 'system', content: 'You are a pirate' }]
 });
 
 // Or use withSession for automatic cleanup
-const result = await ChromiumAI.withSession(ai, async (session) => {
+const result = await ai.withSession(async (session) => {
   return await session.prompt("Hello");
 });
 ```
 
 ### Token Management
 ```typescript
-const usage = await ChromiumAI.checkTokenUsage(ai, "Long text...");
+const usage = await ai.checkTokenUsage("Long text...");
 if (!usage.willFit) {
   // Prompt is too long for the context window
 }
@@ -96,19 +104,18 @@ if (!usage.willFit) {
 
 ### Structured Output
 ```javascript
-const response = await ChromiumAI.prompt(
-  ai,
-  "Analyze the sentiment: 'I love this!'",
-  undefined,
-  { responseConstraint: {
-    type: "object",
-    properties: {
-      sentiment: { type: "string", enum: ["positive", "negative", "neutral"] },
-      confidence: { type: "number" }
-    },
-    required: ["sentiment", "confidence"]
-  }}
-);
+const response = await ai.prompt("Analyze the sentiment: 'I love this!'", {
+  promptOptions: {
+    responseConstraint: {
+      type: "object",
+      properties: {
+        sentiment: { type: "string", enum: ["positive", "negative", "neutral"] },
+        confidence: { type: "number" }
+      },
+      required: ["sentiment", "confidence"]
+    }
+  }
+});
 const result = JSON.parse(response);
 ```
 
@@ -116,12 +123,9 @@ const result = JSON.parse(response);
 ```javascript
 const controller = new AbortController();
 
-const response = await ChromiumAI.prompt(
-  ai,
-  "Write a detailed analysis...",
-  undefined,
-  { signal: controller.signal }
-);
+const response = await ai.prompt("Write a detailed analysis...", {
+  promptOptions: { signal: controller.signal }
+});
 
 // Cancel from elsewhere:
 controller.abort();
@@ -188,24 +192,24 @@ summarizer.destroy();
 Every function has a Safe variant that returns Result types instead of throwing:
 
 ```typescript
-import { safeTranslate, safeDetect, safeSummarize } from 'simple-chromium-ai';
+import { safePrompt, safeTranslate, safeDetect, safeSummarize } from 'simple-chromium-ai';
 
-const result = await safeTranslate("Hello", { sourceLanguage: "en", targetLanguage: "es" });
+const result = await safePrompt("Write a haiku", { systemPrompt: "You are a poet" });
 result.match(
   (text) => console.log(text),
   (error) => console.error(error.message)
 );
 ```
 
-The Prompt API safe variants are available via the default export:
+The Prompt API safe variants are also available via the default export:
 
 ```typescript
 import ChromiumAI from 'simple-chromium-ai';
 
-const result = await ChromiumAI.Safe.initialize("You are helpful");
+const result = await ChromiumAI.Safe.Prompt.create({ systemPrompt: "You are helpful" });
 result.match(
   async (ai) => {
-    const response = await ChromiumAI.Safe.prompt(ai, "Hello");
+    const response = await ai.prompt("Hello");
     response.match(
       (value) => console.log(value),
       (error) => console.error(error.message)

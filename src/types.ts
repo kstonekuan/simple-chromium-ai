@@ -14,16 +14,64 @@ export interface TokenUsageInfo {
 }
 
 /**
- * Represents an initialized Chromium AI instance with a configured system prompt.
- * This object must be passed to all other SDK functions to ensure proper initialization.
+ * Options for creating a Prompt instance
  */
-export interface ChromiumAIInstance {
-	/** The system prompt that will be used for all sessions created from this instance */
+export interface PromptCreateOptions {
+	systemPrompt?: string;
+	expectedOutputLanguages?: string[];
+}
+
+/**
+ * Options for prompting
+ */
+export interface PromptOptions {
+	timeout?: number;
+	promptOptions?: LanguageModelPromptOptions;
+	sessionOptions?: LanguageModelCreateOptions;
+}
+
+/**
+ * A Prompt instance with bound configuration.
+ * Created via `Prompt.create()`.
+ */
+export interface PromptInstance {
 	readonly systemPrompt?: string;
-	/** Unique identifier for this instance */
 	readonly instanceId: string;
-	/** Expected output languages for the LanguageModel API (e.g. ["en"]) */
 	readonly expectedOutputLanguages?: string[];
+	prompt(prompt: string, options?: PromptOptions): Promise<string>;
+	createSession(options?: LanguageModelCreateOptions): Promise<LanguageModel>;
+	withSession<T>(
+		callback: (session: LanguageModel) => Promise<T>,
+		options?: LanguageModelCreateOptions,
+	): Promise<T>;
+	checkTokenUsage(
+		prompt: string,
+		sessionOptions?: LanguageModelCreateOptions,
+	): Promise<TokenUsageInfo>;
+	destroy(): void;
+}
+
+/**
+ * A safe Prompt instance where methods return ResultAsync instead of throwing.
+ * Created via `Prompt.Safe.create()`.
+ */
+export interface SafePromptInstance {
+	readonly systemPrompt?: string;
+	readonly instanceId: string;
+	readonly expectedOutputLanguages?: string[];
+	prompt(prompt: string, options?: PromptOptions): PromptResult;
+	createSession(
+		options?: LanguageModelCreateOptions,
+	): ResultAsync<LanguageModel, Error>;
+	withSession<T>(
+		callback: (session: LanguageModel) => ResultAsync<T, Error>,
+		options?: LanguageModelCreateOptions,
+	): ResultAsync<T, Error>;
+	checkTokenUsage(
+		prompt: string,
+		sessionOptions?: LanguageModelCreateOptions,
+	): ResultAsync<TokenUsageInfo, Error>;
+	destroy(): void;
 }
 
 export type PromptResult = ResultAsync<string, Error>;

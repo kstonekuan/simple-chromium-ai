@@ -1,4 +1,4 @@
-import ChromiumAI, { type ChromiumAIInstance } from "simple-chromium-ai";
+import ChromiumAI, { type SafePromptInstance } from "simple-chromium-ai";
 
 const statusEl = document.getElementById("status") as HTMLDivElement;
 const interfaceEl = document.getElementById("interface") as HTMLDivElement;
@@ -42,7 +42,7 @@ const sections: Record<string, HTMLElement | null> = {
 	summarize: document.getElementById("section-summarize"),
 };
 
-let ai: ChromiumAIInstance | null = null;
+let ai: SafePromptInstance | null = null;
 
 // Toggle visible section based on dropdown
 apiSelect?.addEventListener("change", () => {
@@ -54,9 +54,9 @@ apiSelect?.addEventListener("change", () => {
 
 // Initialize Chrome AI for Prompt API
 async function init() {
-	const result = await ChromiumAI.Safe.initialize(
-		"You are a helpful assistant",
-	);
+	const result = await ChromiumAI.Safe.Prompt.create({
+		systemPrompt: "You are a helpful assistant",
+	});
 
 	result.match(
 		(instance) => {
@@ -74,7 +74,7 @@ async function handlePrompt() {
 	const text = inputPrompt?.value.trim();
 	if (!text || !ai) return;
 
-	const result = await ChromiumAI.Safe.prompt(ai, text);
+	const result = await ai.prompt(text);
 	result.match(
 		(response) => {
 			if (responseEl) responseEl.textContent = response;
