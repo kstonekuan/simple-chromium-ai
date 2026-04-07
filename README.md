@@ -52,19 +52,6 @@ const response2 = await ai.prompt("Write another");
 ai.destroy();
 ```
 
-### One-Shot
-
-For a single prompt without reuse, use the flat export:
-
-```typescript
-import { prompt } from 'simple-chromium-ai';
-
-const response = await prompt("Write a haiku", {
-  systemPrompt: "You are a poet",
-  timeout: 5000,
-});
-```
-
 ### Session Management
 
 ```typescript
@@ -120,6 +107,19 @@ const response = await ai.prompt("Write a detailed analysis...", {
 
 // Cancel from elsewhere:
 controller.abort();
+```
+
+### One-Shot
+
+For a single prompt without reuse, you can also use the flat export:
+
+```typescript
+import { prompt } from 'simple-chromium-ai';
+
+const response = await prompt("Write a haiku", {
+  systemPrompt: "You are a poet",
+  timeout: 5000,
+});
 ```
 
 ## Translator API
