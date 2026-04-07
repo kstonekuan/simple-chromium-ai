@@ -39,8 +39,9 @@ export type {
  */
 export async function initialize(
 	systemPrompt?: string,
+	expectedOutputLanguages?: string[],
 ): Promise<ChromiumAIInstance> {
-	const result = await Safe.initialize(systemPrompt);
+	const result = await Safe.initialize(systemPrompt, expectedOutputLanguages);
 	return okOrThrow(result);
 }
 

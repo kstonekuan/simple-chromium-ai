@@ -22,6 +22,8 @@ export interface ChromiumAIInstance {
 	readonly systemPrompt?: string;
 	/** Unique identifier for this instance */
 	readonly instanceId: string;
+	/** Expected output languages for the LanguageModel API (e.g. ["en"]) */
+	readonly expectedOutputLanguages?: string[];
 }
 
 export type PromptResult = ResultAsync<string, Error>;

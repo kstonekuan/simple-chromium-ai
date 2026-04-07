@@ -20,33 +20,35 @@ import type { ChromiumAIInstance, PromptResult, TokenUsageInfo } from "./types";
  */
 export function initialize(
 	systemPrompt?: string,
+	expectedOutputLanguages: string[] = ["en"],
 ): ResultAsync<ChromiumAIInstance, Error> {
-	const unavailableError = new Error(
-		"Chromium AI API is not available. To use Chrome AI:\n" +
-			"1. You must call this from a browser extension\n" +
-			"2. Use Chrome 138+ or supported Chromium browser\n" +
-			"3. Enable 'Prompt API for Gemini Nano' in chrome://flags\n" +
-			"4. Update 'Optimization Guide On Device Model' in chrome://components (Warning: This will download ~4GB)\n" +
-			"5. Join Chrome EPP for web: https://developer.chrome.com/docs/ai/join-epp",
-	);
 	return new ResultAsync(
 		(async () => {
 			// Check if API exists
 			if (typeof LanguageModel === "undefined") {
-				return err(unavailableError);
+				return err(
+					new Error(
+						"LanguageModel API is not available in this browser. Ensure you are using Chrome 138+ or a supported Chromium-based browser.",
+					),
+				);
 			}
 
 			// Check current availability
 			const availability = await LanguageModel.availability();
 
 			return match(availability)
-				.with("unavailable", "downloadable", "downloading", () =>
-					err(unavailableError),
+				.with("unavailable", () =>
+					err(
+						new Error(
+							"LanguageModel API is present but the model is unavailable on this device.",
+						),
+					),
 				)
-				.with("available", () =>
+				.with("downloadable", "downloading", "available", () =>
 					ok({
 						systemPrompt,
 						instanceId: crypto.randomUUID(),
+						expectedOutputLanguages,
 					}),
 				)
 				.exhaustive();
@@ -81,6 +83,16 @@ export function createSession(
 				const mergedOptions: LanguageModelCreateOptions = {
 					...options,
 				};
+
+				// Set expectedOutputs from instance if not explicitly provided
+				if (
+					!mergedOptions.expectedOutputs &&
+					instance.expectedOutputLanguages
+				) {
+					mergedOptions.expectedOutputs = [
+						{ type: "text", languages: instance.expectedOutputLanguages },
+					];
+				}
 
 				if (options?.initialPrompts && options.initialPrompts.length > 0) {
 					mergedOptions.initialPrompts = options.initialPrompts;
