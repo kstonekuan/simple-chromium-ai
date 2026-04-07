@@ -1,4 +1,9 @@
-import ChromiumAI, { type SafePromptInstance } from "simple-chromium-ai";
+import {
+	safeDetect,
+	safePrompt,
+	safeSummarize,
+	safeTranslate,
+} from "simple-chromium-ai";
 
 const statusEl = document.getElementById("status") as HTMLDivElement;
 const interfaceEl = document.getElementById("interface") as HTMLDivElement;
@@ -42,8 +47,6 @@ const sections: Record<string, HTMLElement | null> = {
 	summarize: document.getElementById("section-summarize"),
 };
 
-let ai: SafePromptInstance | null = null;
-
 // Toggle visible section based on dropdown
 apiSelect?.addEventListener("change", () => {
 	for (const [key, el] of Object.entries(sections)) {
@@ -52,29 +55,17 @@ apiSelect?.addEventListener("change", () => {
 	if (responseEl) responseEl.textContent = "";
 });
 
-// Initialize Chrome AI for Prompt API
-async function init() {
-	const result = await ChromiumAI.Safe.Prompt.create({
-		systemPrompt: "You are a helpful assistant",
-	});
-
-	result.match(
-		(instance) => {
-			ai = instance;
-			if (statusEl) statusEl.textContent = "Chrome AI is ready!";
-			if (interfaceEl) interfaceEl.style.display = "block";
-		},
-		(error) => {
-			if (statusEl) statusEl.textContent = `Error: ${error.message}`;
-		},
-	);
-}
+// Show interface immediately (no init step needed)
+if (statusEl) statusEl.textContent = "Chrome AI is ready!";
+if (interfaceEl) interfaceEl.style.display = "block";
 
 async function handlePrompt() {
 	const text = inputPrompt?.value.trim();
-	if (!text || !ai) return;
+	if (!text) return;
 
-	const result = await ai.prompt(text);
+	const result = await safePrompt(text, {
+		systemPrompt: "You are a helpful assistant",
+	});
 	result.match(
 		(response) => {
 			if (responseEl) responseEl.textContent = response;
@@ -89,7 +80,7 @@ async function handleTranslate() {
 	const text = inputTranslate?.value.trim();
 	if (!text) return;
 
-	const result = await ChromiumAI.Safe.Translator.translate(text, {
+	const result = await safeTranslate(text, {
 		sourceLanguage: sourceLang.value,
 		targetLanguage: targetLang.value,
 	});
@@ -107,7 +98,7 @@ async function handleDetect() {
 	const text = inputDetect?.value.trim();
 	if (!text) return;
 
-	const result = await ChromiumAI.Safe.Detector.detect(text);
+	const result = await safeDetect(text);
 	result.match(
 		(detections) => {
 			if (responseEl) {
@@ -129,7 +120,7 @@ async function handleSummarize() {
 	const text = inputSummarize?.value.trim();
 	if (!text) return;
 
-	const result = await ChromiumAI.Safe.Summarizer.summarize(text, {
+	const result = await safeSummarize(text, {
 		type: summaryType.value as SummarizerType,
 		length: summaryLength.value as SummarizerLength,
 	});
@@ -165,5 +156,3 @@ submitBtn?.addEventListener("click", async () => {
 
 	submitBtn.disabled = false;
 });
-
-init();
