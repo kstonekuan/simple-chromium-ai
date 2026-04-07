@@ -28,7 +28,7 @@ export function initialize(
 			if (typeof LanguageModel === "undefined") {
 				return err(
 					new Error(
-						"LanguageModel API is not available in this browser. Ensure you are using Chrome 138+ or a supported Chromium-based browser.",
+						"LanguageModel API is not available in this browser. Ensure you are using Chrome 148+ or a supported Chromium-based browser.",
 					),
 				);
 			}
@@ -110,7 +110,7 @@ export function createSession(
 			} catch (error) {
 				return err(
 					new Error(
-						`Failed to create AI session: ${error instanceof Error ? error.message : "Unknown error"}. This might be due to rate limiting or resource constraints.`,
+						`Failed to create AI session: ${error instanceof Error ? error.message : "Unknown error"}`,
 					),
 				);
 			}
