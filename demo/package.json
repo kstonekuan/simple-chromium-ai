@@ -15,7 +15,7 @@
 	"author": "",
 	"type": "module",
 	"dependencies": {
-		"simple-chromium-ai": "0.1.4"
+		"simple-chromium-ai": "workspace:*"
 	},
 	"devDependencies": {
 		"@crxjs/vite-plugin": "2.4.0",

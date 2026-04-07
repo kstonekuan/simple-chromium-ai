@@ -25,3 +25,9 @@ export interface ChromiumAIInstance {
 }
 
 export type PromptResult = ResultAsync<string, Error>;
+
+export type TranslateResult = ResultAsync<string, Error>;
+
+export type DetectResult = ResultAsync<LanguageDetectionResult[], Error>;
+
+export type SummarizeResult = ResultAsync<string, Error>;

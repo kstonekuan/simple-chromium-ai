@@ -1,23 +1,28 @@
 /// <reference types="@types/dom-chromium-ai" />
 
-import { type Result, ResultAsync } from "neverthrow";
+import { ResultAsync } from "neverthrow";
+import * as DetectorApi from "./detector";
+import * as DetectorSafe from "./detector-safe";
 import * as Safe from "./safe";
+import * as SummarizerApi from "./summarizer";
+import * as SummarizerSafe from "./summarizer-safe";
+import * as TranslatorApi from "./translator";
+import * as TranslatorSafe from "./translator-safe";
 import type { ChromiumAIInstance, TokenUsageInfo } from "./types";
+import { okOrThrow } from "./utils";
 
 // Re-export Result types for users who want them
 export { err, ok, Result, ResultAsync } from "neverthrow";
 
 // Re-export types for users
-export type { ChromiumAIInstance, PromptResult, TokenUsageInfo } from "./types";
-
-function okOrThrow<T, E>(result: Result<T, E>): T {
-	return result.match(
-		(ok) => ok,
-		(err) => {
-			throw err;
-		},
-	);
-}
+export type {
+	ChromiumAIInstance,
+	DetectResult,
+	PromptResult,
+	SummarizeResult,
+	TokenUsageInfo,
+	TranslateResult,
+} from "./types";
 
 /**
  * Initializes Chromium AI and returns an instance object that must be used with all other functions.
@@ -165,10 +170,24 @@ export async function prompt(
  * if (result.isOk()) {
  *   const response = await ChromiumAI.Safe.prompt(result.value.instance, "Hello!");
  * }
+ *
+ * // Translator
+ * const translated = await ChromiumAI.Translator.translate("Hello", { sourceLanguage: "en", targetLanguage: "es" });
+ *
+ * // Language Detector
+ * const results = await ChromiumAI.Detector.detect("Bonjour le monde");
+ *
+ * // Summarizer
+ * const summary = await ChromiumAI.Summarizer.summarize("Long text...", { type: "tldr" });
  */
 const ChromiumAI = {
 	// Safe API namespace
-	Safe,
+	Safe: {
+		...Safe,
+		Translator: TranslatorSafe,
+		Detector: DetectorSafe,
+		Summarizer: SummarizerSafe,
+	},
 
 	// Default API (throws errors)
 	initialize,
@@ -176,6 +195,11 @@ const ChromiumAI = {
 	createSession,
 	withSession,
 	checkTokenUsage,
+
+	// New API namespaces
+	Translator: TranslatorApi,
+	Detector: DetectorApi,
+	Summarizer: SummarizerApi,
 };
 
 // Default export for convenience

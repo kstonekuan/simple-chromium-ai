@@ -37,8 +37,8 @@ importers:
   demo:
     dependencies:
       simple-chromium-ai:
-        specifier: 0.1.4
-        version: 0.1.4
+        specifier: workspace:*
+        version: link:..
     devDependencies:
       '@crxjs/vite-plugin':
         specifier: 2.4.0
@@ -603,9 +603,6 @@ packages:
   '@types/argparse@1.0.38':
     resolution: {integrity: sha512-ebDJ9b0e702Yr7pWgB0jzm+CX4Srzz8RcXtLJDJB+BSccqMa36uyH/zUsSYao5+BD1ytv3k3rPYCq4mAE1hsXA==}
 
-  '@types/dom-chromium-ai@0.0.14':
-    resolution: {integrity: sha512-inGI/sSihVWbJUt4jXZqjcdT8lee3BZHyhbBOafR4wVS8JYQ9u9XoWW6kcvJazhAyAlJ6lL7V6wxoFvnomEKTA==}
-
   '@types/dom-chromium-ai@0.0.16':
     resolution: {integrity: sha512-Z0vOBWckovkc85zctYKGEUUBHaqt9Oz8AUhAVyoNLAsMGlBhMNl/8w1n8JG1y0g7TW03EzWt5RsdcDD70ra58g==}
 
@@ -1080,10 +1077,6 @@ packages:
     resolution: {integrity: sha512-1bCSESV6Pv+i21Hvpxp3Dx+pSD8lIPt8uVjRrxAUt/nbswYc+tK6Y2btiULjd4+fnq15PX+nqQDC7Oft7WkwcA==}
     engines: {node: '>=10'}
     hasBin: true
-
-  simple-chromium-ai@0.1.4:
-    resolution: {integrity: sha512-N4bjf5wQLFP24fU5HMJyX8fWB9gOtfjbC4VCx+3+K1+N16og3Ee8WuELn72eIKvi8VTix5Ufpi6JFZC50atQmg==}
-    engines: {node: '>=14.0.0'}
 
   source-map-js@1.2.1:
     resolution: {integrity: sha512-UXWMKhLOwVKb728IUtQPXxfYU+usdybtUrK/8uGE8CQMvrhOpwvzDBwj0QhSL7MQc7vIsISBG8VQ8+IDQxpfQA==}
@@ -1618,8 +1611,6 @@ snapshots:
 
   '@types/argparse@1.0.38': {}
 
-  '@types/dom-chromium-ai@0.0.14': {}
-
   '@types/dom-chromium-ai@0.0.16': {}
 
   '@types/estree@1.0.8': {}
@@ -2115,11 +2106,6 @@ snapshots:
   semver@7.5.4:
     dependencies:
       lru-cache: 6.0.0
-
-  simple-chromium-ai@0.1.4:
-    dependencies:
-      '@types/dom-chromium-ai': 0.0.14
-      neverthrow: 8.2.0
 
   source-map-js@1.2.1: {}
 

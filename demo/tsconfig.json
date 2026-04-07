@@ -19,7 +19,10 @@
 		"resolveJsonModule": true,
 		"incremental": true,
 		"lib": ["ES2020", "DOM"],
-		"types": ["node"]
+		"types": ["node"],
+		"paths": {
+			"simple-chromium-ai": ["../src/index.ts"]
+		}
 	},
 	"include": ["popup.ts"]
 }
