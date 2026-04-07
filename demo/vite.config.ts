@@ -3,5 +3,6 @@ import { defineConfig } from "vite";
 import manifest from "./manifest.json";
 
 export default defineConfig({
+	base: "",
 	plugins: [crx({ manifest })],
 });
