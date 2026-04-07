@@ -1,23 +1,42 @@
 /// <reference types="@types/dom-chromium-ai" />
 
-import { type Result, ResultAsync } from "neverthrow";
+import { ResultAsync } from "neverthrow";
+import * as DetectorApi from "./detector";
+import * as DetectorSafe from "./detector-safe";
 import * as Safe from "./safe";
+import * as SummarizerApi from "./summarizer";
+import * as SummarizerSafe from "./summarizer-safe";
+import * as TranslatorApi from "./translator";
+import * as TranslatorSafe from "./translator-safe";
 import type { ChromiumAIInstance, TokenUsageInfo } from "./types";
+import { okOrThrow } from "./utils";
 
 // Re-export Result types for users who want them
 export { err, ok, Result, ResultAsync } from "neverthrow";
-
+export { detect } from "./detector";
+export { detect as safeDetect } from "./detector-safe";
+export { summarize } from "./summarizer";
+export { summarize as safeSummarize } from "./summarizer-safe";
+// Flat convenience exports (one-shot functions)
+export { translate } from "./translator";
+// Safe flat exports
+export { translate as safeTranslate } from "./translator-safe";
 // Re-export types for users
-export type { ChromiumAIInstance, PromptResult, TokenUsageInfo } from "./types";
+export type {
+	ChromiumAIInstance,
+	DetectResult,
+	PromptResult,
+	SummarizeResult,
+	TokenUsageInfo,
+	TranslateResult,
+} from "./types";
 
-function okOrThrow<T, E>(result: Result<T, E>): T {
-	return result.match(
-		(ok) => ok,
-		(err) => {
-			throw err;
-		},
-	);
-}
+// Namespace exports for advanced use (.create(), .availability())
+export {
+	DetectorApi as Detector,
+	SummarizerApi as Summarizer,
+	TranslatorApi as Translator,
+};
 
 /**
  * Initializes Chromium AI and returns an instance object that must be used with all other functions.
@@ -29,13 +48,13 @@ function okOrThrow<T, E>(result: Result<T, E>): T {
  * @throws {Error} If initialization fails
  *
  * @example
- * const result = await initialize("You are a helpful assistant");
- * const ai = result.instance;
+ * const ai = await initialize("You are a helpful assistant");
  */
 export async function initialize(
 	systemPrompt?: string,
+	expectedOutputLanguages?: string[],
 ): Promise<ChromiumAIInstance> {
-	const result = await Safe.initialize(systemPrompt);
+	const result = await Safe.initialize(systemPrompt, expectedOutputLanguages);
 	return okOrThrow(result);
 }
 
@@ -156,19 +175,32 @@ export async function prompt(
  * import ChromiumAI from 'simple-chromium-ai';
  *
  * // Default API (throws errors)
- * const result = await ChromiumAI.initialize("You are helpful");
- * const ai = result.instance;
+ * const ai = await ChromiumAI.initialize("You are helpful");
  * const response = await ChromiumAI.prompt(ai, "Hello!");
  *
  * // Safe API (returns Results)
  * const result = await ChromiumAI.Safe.initialize("You are helpful");
  * if (result.isOk()) {
- *   const response = await ChromiumAI.Safe.prompt(result.value.instance, "Hello!");
+ *   const response = await ChromiumAI.Safe.prompt(result.value, "Hello!");
  * }
+ *
+ * // Translator
+ * const translated = await ChromiumAI.Translator.translate("Hello", { sourceLanguage: "en", targetLanguage: "es" });
+ *
+ * // Language Detector
+ * const results = await ChromiumAI.Detector.detect("Bonjour le monde");
+ *
+ * // Summarizer
+ * const summary = await ChromiumAI.Summarizer.summarize("Long text...", { type: "tldr" });
  */
 const ChromiumAI = {
 	// Safe API namespace
-	Safe,
+	Safe: {
+		...Safe,
+		Translator: TranslatorSafe,
+		Detector: DetectorSafe,
+		Summarizer: SummarizerSafe,
+	},
 
 	// Default API (throws errors)
 	initialize,
@@ -176,6 +208,11 @@ const ChromiumAI = {
 	createSession,
 	withSession,
 	checkTokenUsage,
+
+	// New API namespaces
+	Translator: TranslatorApi,
+	Detector: DetectorApi,
+	Summarizer: SummarizerApi,
 };
 
 // Default export for convenience

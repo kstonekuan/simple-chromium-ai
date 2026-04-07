@@ -6,17 +6,65 @@
     body { width: 400px; padding: 10px; font-family: monospace; }
     textarea { width: 100%; margin: 10px 0; }
     pre { white-space: pre-wrap; }
+    select, input, button { margin: 4px 0; }
+    .api-section { margin-top: 8px; }
+    .options-row { display: flex; gap: 8px; align-items: center; }
+    .options-row label { font-size: 12px; }
+    .options-row input { width: 50px; }
   </style>
 </head>
 <body>
   <div id="status">Checking Chrome AI...</div>
-  
+
   <div id="interface" style="display: none;">
-    <textarea id="input" rows="3" placeholder="Enter prompt..."></textarea>
+    <select id="api-select">
+      <option value="prompt">Prompt</option>
+      <option value="translate">Translate</option>
+      <option value="detect">Detect Language</option>
+      <option value="summarize">Summarize</option>
+    </select>
+
+    <div id="section-prompt" class="api-section">
+      <textarea id="input-prompt" rows="3" placeholder="Enter prompt..."></textarea>
+    </div>
+
+    <div id="section-translate" class="api-section" style="display: none;">
+      <div class="options-row">
+        <label>From: <input id="source-lang" value="en"></label>
+        <label>To: <input id="target-lang" value="es"></label>
+      </div>
+      <textarea id="input-translate" rows="3" placeholder="Text to translate..."></textarea>
+    </div>
+
+    <div id="section-detect" class="api-section" style="display: none;">
+      <textarea id="input-detect" rows="3" placeholder="Text to detect language..."></textarea>
+    </div>
+
+    <div id="section-summarize" class="api-section" style="display: none;">
+      <div class="options-row">
+        <label>Type:
+          <select id="summary-type">
+            <option value="tldr">TL;DR</option>
+            <option value="key-points">Key Points</option>
+            <option value="teaser">Teaser</option>
+            <option value="headline">Headline</option>
+          </select>
+        </label>
+        <label>Length:
+          <select id="summary-length">
+            <option value="short">Short</option>
+            <option value="medium" selected>Medium</option>
+            <option value="long">Long</option>
+          </select>
+        </label>
+      </div>
+      <textarea id="input-summarize" rows="5" placeholder="Text to summarize..."></textarea>
+    </div>
+
     <button id="submit">Send</button>
     <pre id="response"></pre>
   </div>
-  
-  <script type="module" src="./popup.ts"></script>
+
+  <script src="./popup.js"></script>
 </body>
 </html>

@@ -1,17 +1,16 @@
 # Simple Chromium AI
 
-A lightweight TypeScript wrapper for Chrome's built-in AI Prompt API that trades flexibility for simplicity and type safety.
+A lightweight TypeScript wrapper for Chrome's built-in AI APIs (Prompt, Translator, Language Detector, and Summarizer) that trades flexibility for simplicity and type safety.
 
 ## Why Use This?
 
-Chrome's native AI API is powerful but requires careful initialization and session management. This wrapper provides:
+Chrome's native AI APIs are powerful but require careful initialization and session management. This wrapper provides:
 
-- **Type-safe initialization** - Can't call functions without proper setup
-- **Automatic error handling** - Graceful failures with clear messages  
+- **Automatic error handling** - Graceful failures with clear messages
 - **Simplified API** - Common tasks in one function call
-- **Safe API variant** - Result types for better error handling
+- **Safe API variant** - Result types instead of throwing
 
-For advanced use cases requiring more control, use the [original Chrome AI APIs](https://developer.chrome.com/docs/ai/prompt-api) directly.
+For advanced use cases requiring more control, use the [original Chrome AI APIs](https://developer.chrome.com/docs/ai/built-in-apis) directly.
 
 ## Quick Start
 
@@ -20,112 +19,60 @@ npm install simple-chromium-ai
 ```
 
 ```javascript
-import ChromiumAI from 'simple-chromium-ai';
+import { translate, detect, summarize } from 'simple-chromium-ai';
 
-// Initialize once
-const ai = await ChromiumAI.initialize("You are a helpful assistant");
-
-// Simple prompt
-const response = await ChromiumAI.prompt(ai, "Write a haiku");
-
-// Or use the Safe API for error handling
-const safeResult = await ChromiumAI.Safe.initialize("You are a helpful assistant");
-safeResult.match(
-  async (ai) => {
-    const safeResponse = await ChromiumAI.Safe.prompt(ai, "Write a haiku");
-    safeResponse.match(
-      (value) => console.log(value),
-      (error) => console.error(error.message)
-    );
-  },
-  (error) => console.error(error.message)
-);
+// These just work — no initialization needed
+const translated = await translate("Hello", { sourceLanguage: "en", targetLanguage: "es" });
+const detections = await detect("Bonjour le monde");
+const summary = await summarize("Long article...", { type: "tldr" });
 ```
 
-## Demo Extension
+The Prompt API requires initialization since it manages session state:
 
-A minimal Chrome extension demo is included in the `demo` folder. It demonstrates:
-- Checking Chrome AI availability
-- Showing setup instructions if not available
-- Simple prompt/response interface using the Safe API
+```javascript
+import ChromiumAI from 'simple-chromium-ai';
 
-![Chrome AI Demo Extension](images/chrome_ai_demo.jpg)
-
-**[Available on the Chrome Web Store](https://chromewebstore.google.com/detail/fihhgimeakbpnioianlhlejlblefeegn)**
-
-To run the demo locally:
-```bash
-cd demo
-npm install
-npm run build
-# Then load the demo folder as an unpacked extension in Chrome
+const ai = await ChromiumAI.initialize("You are a helpful assistant");
+const response = await ChromiumAI.prompt(ai, "Write a haiku");
 ```
 
 ## Prerequisites
 
-- Must be called from a browser extension
-- Chrome 138+ or supported Chromium Browser
-- Enable "Prompt API for Gemini Nano" in `chrome://flags`
-- Update "Optimization Guide On Device Model" in `chrome://components`
-  ⚠️ **Warning: This will download ~4GB. See the [hardware requirements](https://developer.chrome.com/docs/ai/get-started#hardware)**
-- Join Chrome [EPP](https://developer.chrome.com/docs/ai/join-epp) for web (non-extension) use
+- Chrome 138+ for Translator, Language Detector, and Summarizer APIs
+- Chrome 148+ for Prompt API
+- See [hardware requirements](https://developer.chrome.com/docs/ai/get-started#hardware) — models are downloaded on-device (~4GB)
 
-## Troubleshooting
+## Prompt API
 
-If you're experiencing issues with Chrome AI not being available, try these debugging steps:
-
-### Check Chrome AI Status
-
-1. **Check the internal status page:**
-   Navigate to `chrome://on-device-internals/` to see the current model status
-
-2. **Check availability in console:**
-   Open Chrome DevTools console and run:
-   ```javascript
-   await LanguageModel.availability()
-   ```
-   This should return one of: `"available"`, `"downloadable"`, `"downloading"`, or `"unavailable"`
-
-### Trigger Model Download
-
-If the status shows `"downloadable"`, you may need to trigger the model download in the console with this script from the [official docs](https://developer.chrome.com/docs/ai/prompt-api#use_the_prompt_api):
-
-```javascript
-await LanguageModel.create({
-  monitor(m) {
-    m.addEventListener('downloadprogress', (e) => {
-      console.log(`Downloaded ${e.loaded * 100}%`);
-    });
-  },
-});
-```
-
-## Core Functions
+The Prompt API requires initializing an instance with a system prompt. The instance is then passed to all subsequent calls.
 
 ### Initialize
 ```typescript
 const ai = await ChromiumAI.initialize(
-  systemPrompt?: string
+  systemPrompt?: string,
+  expectedOutputLanguages?: string[] // defaults to ["en"]
 );
 ```
 
-**Important:** If Chrome AI is not available, downloadable, or downloading, the function will throw an error with instructions on how to enable Chrome AI.
+The `expectedOutputLanguages` parameter tells Chrome what language(s) the model should output.
 
-### Single Prompt
+### Prompt
 ```typescript
 const response = await ChromiumAI.prompt(
   ai,
   "Your prompt",
-  timeout?: number
+  timeout?: number,
+  promptOptions?: LanguageModelPromptOptions, // signal, responseConstraint, etc.
+  sessionOptions?: LanguageModelCreateOptions
 );
 ```
 
 ### Session Management
 ```typescript
-// Create reusable session
+// Create reusable session (maintains conversation context)
 const session = await ChromiumAI.createSession(ai);
 const response1 = await session.prompt("Hello");
-const response2 = await session.prompt("Follow up"); // Maintains context
+const response2 = await session.prompt("Follow up");
 session.destroy();
 
 // Override the instance's system prompt for this session
@@ -142,8 +89,98 @@ const result = await ChromiumAI.withSession(ai, async (session) => {
 ### Token Management
 ```typescript
 const usage = await ChromiumAI.checkTokenUsage(ai, "Long text...");
-console.log(`Will fit: ${usage.willFit}`);
-console.log(`Tokens needed: ${usage.promptTokens}/${usage.maxTokens}`);
+if (!usage.willFit) {
+  // Prompt is too long for the context window
+}
+```
+
+### Structured Output
+```javascript
+const response = await ChromiumAI.prompt(
+  ai,
+  "Analyze the sentiment: 'I love this!'",
+  undefined,
+  { responseConstraint: {
+    type: "object",
+    properties: {
+      sentiment: { type: "string", enum: ["positive", "negative", "neutral"] },
+      confidence: { type: "number" }
+    },
+    required: ["sentiment", "confidence"]
+  }}
+);
+const result = JSON.parse(response);
+```
+
+### Cancellation
+```javascript
+const controller = new AbortController();
+
+const response = await ChromiumAI.prompt(
+  ai,
+  "Write a detailed analysis...",
+  undefined,
+  { signal: controller.signal }
+);
+
+// Cancel from elsewhere:
+controller.abort();
+```
+
+## Translator API
+
+```typescript
+import { translate } from 'simple-chromium-ai';
+
+const translated = await translate("Hello", {
+  sourceLanguage: "en",
+  targetLanguage: "es",
+});
+```
+
+For multiple translations with the same language pair, create a reusable instance:
+
+```typescript
+import { Translator } from 'simple-chromium-ai';
+
+const translator = await Translator.create({
+  sourceLanguage: "en",
+  targetLanguage: "ja",
+});
+const result1 = await translator.translate("Hello");
+const result2 = await translator.translate("Goodbye");
+translator.destroy();
+```
+
+## Language Detector API
+
+```typescript
+import { detect } from 'simple-chromium-ai';
+
+const detections = await detect("Bonjour le monde");
+// Returns: [{ detectedLanguage: "fr", confidence: 0.95 }, ...]
+```
+
+## Summarizer API
+
+```typescript
+import { summarize } from 'simple-chromium-ai';
+
+const summary = await summarize("Long article text...", {
+  type: "tldr",       // "tldr" | "key-points" | "teaser" | "headline"
+  length: "medium",   // "short" | "medium" | "long"
+});
+```
+
+For multiple summarizations with the same options, create a reusable instance:
+
+```typescript
+import { Summarizer } from 'simple-chromium-ai';
+
+const summarizer = await Summarizer.create({ type: "key-points", length: "short" });
+const summary1 = await summarizer.summarize("First article...");
+const summary2 = await summarizer.summarize("Second article...");
+summarizer.destroy();
 ```
 
 ## Safe API
@@ -151,7 +188,19 @@ console.log(`Tokens needed: ${usage.promptTokens}/${usage.maxTokens}`);
 Every function has a Safe variant that returns Result types instead of throwing:
 
 ```typescript
-import { ChromiumAI } from 'simple-chromium-ai';
+import { safeTranslate, safeDetect, safeSummarize } from 'simple-chromium-ai';
+
+const result = await safeTranslate("Hello", { sourceLanguage: "en", targetLanguage: "es" });
+result.match(
+  (text) => console.log(text),
+  (error) => console.error(error.message)
+);
+```
+
+The Prompt API safe variants are available via the default export:
+
+```typescript
+import ChromiumAI from 'simple-chromium-ai';
 
 const result = await ChromiumAI.Safe.initialize("You are helpful");
 result.match(
@@ -159,156 +208,71 @@ result.match(
     const response = await ChromiumAI.Safe.prompt(ai, "Hello");
     response.match(
       (value) => console.log(value),
-      (error) => console.error("Prompt failed:", error.message)
+      (error) => console.error(error.message)
     );
   },
-  (error) => {
-    console.error("Failed:", error.message);
-    return;
-  }
+  (error) => console.error(error.message)
 );
-```
-
-## Type Safety
-
-The wrapper enforces proper initialization through TypeScript:
-
-```typescript
-// ❌ Won't compile - need AI instance
-await ChromiumAI.prompt("Hello");
-
-// ✅ Correct usage
-const ai = await ChromiumAI.initialize("You are helpful");
-await ChromiumAI.prompt(ai, "Hello");
 ```
 
 ## Limitations
 
-This wrapper prioritizes simplicity over flexibility. You cannot:
+This wrapper prioritizes simplicity over flexibility. It does not expose:
 
-- Access streaming responses (use native `session.promptStreaming()` instead)
+- Streaming responses (`promptStreaming()`, `translateStreaming()`, `summarizeStreaming()`)
+- Writer and Rewriter APIs
+- Proofreader API
 
-For these features, use the [native Chromium AI API](https://developer.chrome.com/docs/ai/prompt-api).
+For these features, use the [native Chrome AI APIs](https://developer.chrome.com/docs/ai/built-in-apis) directly.
 
-## Examples
+## Demo Extension
 
-### Basic Chat
-```javascript
-const ai = await ChromiumAI.initialize("You are a friendly assistant");
-const response = await ChromiumAI.prompt(ai, "Tell me a joke");
+A minimal Chrome extension demo is included in the `demo` folder.
+
+![Chrome AI Demo Extension](images/chrome_ai_demo.jpg)
+
+**[Available on the Chrome Web Store](https://chromewebstore.google.com/detail/fihhgimeakbpnioianlhlejlblefeegn)**
+
+To run locally:
+```bash
+cd demo
+npm install
+npm run build
+# Load the demo/dist folder as an unpacked extension in Chrome
 ```
 
-### Error Handling
-```javascript
-try {
-  const ai = await ChromiumAI.initialize("You are helpful");
-  const response = await ChromiumAI.prompt(ai, "Hello!");
-} catch (error) {
-  console.error('Initialization failed:', error.message);
-  // Error message will include instructions on how to enable Chrome AI
-}
-```
+## Troubleshooting
 
-### Safe API Example
-```javascript
-// Using the Safe API for better error handling
-const result = await ChromiumAI.Safe.initialize("You are helpful");
+1. Navigate to `chrome://on-device-internals/` to check model status
 
-result.match(
-  async (ai) => {
-    const promptResult = await ChromiumAI.Safe.prompt(ai, "Hello!");
-    promptResult.match(
-      (value) => console.log('Response:', value),
-      (error) => console.error('Prompt failed:', error.message)
-    );
-  },
-  (error) => {
-    console.error('Initialization failed:', error.message);
-    // Error message includes instructions on how to enable Chrome AI
-  }
-);
-```
+2. Check availability in the DevTools console:
+   ```javascript
+   await LanguageModel.availability()
+   // Returns: "available" | "downloadable" | "downloading" | "unavailable"
+   ```
 
-### Token Checking
-```javascript
-const usage = await ChromiumAI.checkTokenUsage(ai, longText);
-if (!usage.willFit) {
-  // Use shorter prompt
-  const response = await ChromiumAI.prompt(ai, "Summarize briefly");
-}
-```
+3. If `"downloadable"`, trigger the download:
+   ```javascript
+   await LanguageModel.create({
+     monitor(m) {
+       m.addEventListener('downloadprogress', (e) => {
+         console.log(`Downloaded ${e.loaded * 100}%`);
+       });
+     },
+   });
+   ```
 
-### Structured Output with Response Constraints
-```javascript
-// Define JSON schema for the response
-const schema = {
-  type: "object",
-  properties: {
-    sentiment: {
-      type: "string",
-      enum: ["positive", "negative", "neutral"]
-    },
-    confidence: {
-      type: "number",
-      minimum: 0,
-      maximum: 1
-    },
-    keywords: {
-      type: "array",
-      items: { type: "string" },
-      maxItems: 5
-    }
-  },
-  required: ["sentiment", "confidence", "keywords"]
-};
-
-// Create session with response constraint
-const response = await ChromiumAI.prompt(
-  ai, 
-  "Analyze the sentiment of this text: 'I love this new feature!'",
-  undefined, // no timeout
-  { responseConstraint: schema }
-);
-
-// Response will be valid JSON matching the schema
-const result = JSON.parse(response);
-console.log(result); 
-// { sentiment: "positive", confidence: 0.95, keywords: ["love", "new", "feature"] }
-```
-
-### Cancellable Prompts with AbortController
-```javascript
-// Create an AbortController to cancel long-running prompts
-const controller = new AbortController();
-
-// Set up a cancel button
-const cancelButton = document.getElementById('cancel');
-cancelButton.onclick = () => controller.abort();
-
-try {
-  // Pass the abort signal to the prompt
-  const response = await ChromiumAI.prompt(
-    ai, 
-    "Write a detailed analysis of quantum computing...",
-    undefined, // no timeout
-    { signal: controller.signal } // prompt options with abort signal
-  );
-  console.log(response);
-} catch (error) {
-  if (error.name === 'AbortError') {
-    console.log('Prompt was cancelled by user');
-  } else {
-    console.error('Error:', error.message);
-  }
-}
-```
+   The library also triggers downloads automatically when you call any API function.
 
 ## Resources
 
-- [Chrome AI Prompt API Documentation](https://developer.chrome.com/docs/ai/prompt-api)
-- [Structured Output with Response Constraints](https://developer.chrome.com/docs/ai/structured-output-for-prompt-api)
-- [W3C Prompt API Specification](https://github.com/webmachinelearning/prompt-api)
-- [Example Usage in Squash Browser Memory Extension](https://github.com/kstonekuan/squash-browser-memory)
+- [Chrome Built-in AI APIs Overview](https://developer.chrome.com/docs/ai/built-in-apis)
+- [Prompt API](https://developer.chrome.com/docs/ai/prompt-api)
+- [Translator API](https://developer.chrome.com/docs/ai/translator-api)
+- [Language Detector API](https://developer.chrome.com/docs/ai/language-detection)
+- [Summarizer API](https://developer.chrome.com/docs/ai/summarizer-api)
+- [Structured Output](https://developer.chrome.com/docs/ai/structured-output-for-prompt-api)
+- [W3C Prompt API Spec](https://github.com/webmachinelearning/prompt-api)
 
 ## License
 
