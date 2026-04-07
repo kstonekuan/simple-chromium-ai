@@ -19,23 +19,16 @@ npm install simple-chromium-ai
 ```
 
 ```javascript
-import { prompt, translate, detect, summarize } from 'simple-chromium-ai';
+import { Prompt, translate, detect, summarize } from 'simple-chromium-ai';
 
-// One-shot functions — no initialization needed
-const response = await prompt("Write a haiku", { systemPrompt: "You are a poet" });
+// Prompt API — create a reusable instance
+const ai = await Prompt.create({ systemPrompt: "You are a helpful assistant" });
+const response = await ai.prompt("Write a haiku");
+
+// Translator, Detector, Summarizer — one-shot, no setup needed
 const translated = await translate("Hello", { sourceLanguage: "en", targetLanguage: "es" });
 const detections = await detect("Bonjour le monde");
 const summary = await summarize("Long article...", { type: "tldr" });
-```
-
-For reusable instances with shared config:
-
-```javascript
-import { Prompt } from 'simple-chromium-ai';
-
-const ai = await Prompt.create({ systemPrompt: "You are a helpful assistant" });
-const response = await ai.prompt("Write a haiku");
-ai.destroy();
 ```
 
 ## Prerequisites
@@ -45,21 +38,6 @@ ai.destroy();
 - See [hardware requirements](https://developer.chrome.com/docs/ai/get-started#hardware) — models are downloaded on-device (~4GB)
 
 ## Prompt API
-
-### One-Shot
-
-```typescript
-import { prompt } from 'simple-chromium-ai';
-
-const response = await prompt("Write a haiku", {
-  systemPrompt: "You are a poet",
-  timeout: 5000,
-});
-```
-
-### Reusable Instance
-
-For multiple prompts with the same config, create an instance:
 
 ```typescript
 import { Prompt } from 'simple-chromium-ai';
@@ -72,6 +50,19 @@ const ai = await Prompt.create({
 const response1 = await ai.prompt("Write a haiku");
 const response2 = await ai.prompt("Write another");
 ai.destroy();
+```
+
+### One-Shot
+
+For a single prompt without reuse, use the flat export:
+
+```typescript
+import { prompt } from 'simple-chromium-ai';
+
+const response = await prompt("Write a haiku", {
+  systemPrompt: "You are a poet",
+  timeout: 5000,
+});
 ```
 
 ### Session Management
@@ -192,18 +183,6 @@ summarizer.destroy();
 Every function has a Safe variant that returns Result types instead of throwing:
 
 ```typescript
-import { safePrompt, safeTranslate, safeDetect, safeSummarize } from 'simple-chromium-ai';
-
-const result = await safePrompt("Write a haiku", { systemPrompt: "You are a poet" });
-result.match(
-  (text) => console.log(text),
-  (error) => console.error(error.message)
-);
-```
-
-The Prompt API safe variants are also available via the default export:
-
-```typescript
 import ChromiumAI from 'simple-chromium-ai';
 
 const result = await ChromiumAI.Safe.Prompt.create({ systemPrompt: "You are helpful" });
@@ -215,6 +194,18 @@ result.match(
       (error) => console.error(error.message)
     );
   },
+  (error) => console.error(error.message)
+);
+```
+
+One-shot safe variants are also available as flat exports:
+
+```typescript
+import { safePrompt, safeTranslate, safeDetect, safeSummarize } from 'simple-chromium-ai';
+
+const result = await safeTranslate("Hello", { sourceLanguage: "en", targetLanguage: "es" });
+result.match(
+  (text) => console.log(text),
   (error) => console.error(error.message)
 );
 ```
