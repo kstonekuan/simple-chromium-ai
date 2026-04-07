@@ -23,8 +23,10 @@ export { translate } from "./translator";
 export { translate as safeTranslate } from "./translator-safe";
 // Re-export types for users
 export type {
+	CheckInputUsageResult,
 	ChromiumAIInstance,
 	DetectResult,
+	InputUsageInfo,
 	PromptResult,
 	SummarizeResult,
 	TokenUsageInfo,

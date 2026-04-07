@@ -183,6 +183,19 @@ const summary2 = await summarizer.summarize("Second article...");
 summarizer.destroy();
 ```
 
+### Input Measurement
+
+Check if input fits within the model's limits before summarizing:
+
+```typescript
+import { Summarizer } from 'simple-chromium-ai';
+
+const usage = await Summarizer.checkInputUsage("Long article...", { type: "tldr" });
+if (usage.willFit) {
+  const summary = await Summarizer.summarize("Long article...", { type: "tldr" });
+}
+```
+
 ## Safe API
 
 Every function has a Safe variant that returns Result types instead of throwing:

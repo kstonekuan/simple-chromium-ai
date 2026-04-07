@@ -33,3 +33,14 @@ export type TranslateResult = ResultAsync<string, Error>;
 export type DetectResult = ResultAsync<LanguageDetectionResult[], Error>;
 
 export type SummarizeResult = ResultAsync<string, Error>;
+
+/**
+ * Information about input usage for a summarization request
+ */
+export interface InputUsageInfo {
+	inputUsage: number;
+	inputQuota: number;
+	willFit: boolean;
+}
+
+export type CheckInputUsageResult = ResultAsync<InputUsageInfo, Error>;

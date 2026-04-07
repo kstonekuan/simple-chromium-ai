@@ -1,7 +1,7 @@
 /// <reference types="@types/dom-chromium-ai" />
 
 import { ResultAsync } from "neverthrow";
-import type { SummarizeResult } from "./types";
+import type { CheckInputUsageResult, SummarizeResult } from "./types";
 import { checkAvailability } from "./utils";
 
 /**
@@ -73,6 +73,46 @@ export function summarize(
 				error instanceof Error
 					? error
 					: new Error(`Summarization failed: ${String(error)}`),
+		),
+	);
+}
+
+/**
+ * Checks input usage for a summarization request without performing it.
+ * Creates a temporary Summarizer instance to measure the input, then destroys it.
+ *
+ * @param input The text to measure
+ * @param createOptions Optional creation options (type, format, length, sharedContext)
+ * @param summarizeOptions Optional options for the measurement (context, signal)
+ * @returns A Result containing input usage information or an Error
+ */
+export function checkInputUsage(
+	input: string,
+	createOptions?: SummarizerCreateOptions,
+	summarizeOptions?: SummarizerSummarizeOptions,
+): CheckInputUsageResult {
+	return checkAvailability(
+		() => Summarizer.availability(createOptions),
+		"Summarizer",
+	).andThen(() =>
+		ResultAsync.fromPromise(
+			(async () => {
+				const summarizer = await Summarizer.create(createOptions);
+				try {
+					const inputUsage = await summarizer.measureInputUsage(
+						input,
+						summarizeOptions,
+					);
+					const inputQuota = summarizer.inputQuota || 0;
+					return { inputUsage, inputQuota, willFit: inputUsage <= inputQuota };
+				} finally {
+					summarizer.destroy();
+				}
+			})(),
+			(error) =>
+				error instanceof Error
+					? error
+					: new Error(`Failed to check input usage: ${String(error)}`),
 		),
 	);
 }
