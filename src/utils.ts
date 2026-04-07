@@ -21,14 +21,14 @@ export function checkAvailability(
 			try {
 				const availability = await availabilityFn();
 				return match(availability)
-					.with("unavailable", "downloadable", "downloading", () =>
+					.with("unavailable", () =>
 						err(
 							new Error(
-								`${apiName} API is not available. Use Chrome 138+ and enable the relevant flag in chrome://flags.`,
+								`${apiName} API is present but the model is unavailable on this device.`,
 							),
 						),
 					)
-					.with("available", () => ok(undefined))
+					.with("downloadable", "downloading", "available", () => ok(undefined))
 					.exhaustive();
 			} catch (error) {
 				return err(
