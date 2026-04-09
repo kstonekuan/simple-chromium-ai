@@ -1,81 +1,72 @@
 /// <reference types="@types/dom-chromium-ai" />
 
 import { ResultAsync } from "neverthrow";
-import type { TranslateResult } from "./types";
+import type { SafeTranslatorInstance } from "./types";
 import { checkAvailability } from "./utils";
 
 /**
- * Checks availability of the Translator API for the given language pair.
- * Returns a Result containing the availability status.
+ * Initializes the Translator API for a specific language pair by checking
+ * availability and triggering model download.
+ * Returns a safe instance object with `.translate()` and `.createSession()` methods.
  *
  * @param options Language pair options (sourceLanguage, targetLanguage)
- * @returns A Result containing the Availability status or an Error
- */
-export function availability(
-	options: TranslatorCreateCoreOptions,
-): ResultAsync<Availability, Error> {
-	return ResultAsync.fromPromise(Translator.availability(options), (error) =>
-		error instanceof Error
-			? error
-			: new Error(`Failed to check Translator availability: ${String(error)}`),
-	);
-}
-
-/**
- * Creates a reusable Translator instance.
- * The caller is responsible for calling `.destroy()` when done.
+ * @returns A Result containing a SafeTranslatorInstance or an Error
  *
- * @param options Translator creation options including language pair
- * @returns A Result containing a Translator instance or an Error
+ * @example
+ * const result = await initTranslator({ sourceLanguage: "en", targetLanguage: "es" });
+ * result.match(
+ *   (translator) => translator.translate("Hello"),
+ *   (error) => console.error(error.message)
+ * );
  */
-export function create(
-	options: TranslatorCreateOptions,
-): ResultAsync<Translator, Error> {
-	return checkAvailability(
-		() => Translator.availability(options),
-		"Translator",
-	).andThen(() =>
-		ResultAsync.fromPromise(Translator.create(options), (error) =>
-			error instanceof Error
-				? error
-				: new Error(`Failed to create Translator: ${String(error)}`),
-		),
-	);
-}
-
-/**
- * One-shot translate: creates a Translator, translates text, and destroys the instance.
- *
- * @param text The text to translate
- * @param options Language pair options (sourceLanguage, targetLanguage)
- * @param signal Optional AbortSignal for cancellation
- * @returns A Result containing the translated text or an Error
- */
-export function translate(
-	text: string,
+export function initTranslator(
 	options: TranslatorCreateCoreOptions,
-	signal?: AbortSignal,
-): TranslateResult {
+): ResultAsync<SafeTranslatorInstance, Error> {
 	return checkAvailability(
 		() => Translator.availability(options),
 		"Translator",
 	).andThen(() =>
 		ResultAsync.fromPromise(
 			(async () => {
+				// Trigger actual model download
 				const translator = await Translator.create(options);
-				try {
-					return await translator.translate(
-						text,
-						signal ? { signal } : undefined,
-					);
-				} finally {
-					translator.destroy();
-				}
+				translator.destroy();
+
+				const instance: SafeTranslatorInstance = {
+					translate: (text, signal) =>
+						ResultAsync.fromPromise(
+							(async () => {
+								const t = await Translator.create(options);
+								try {
+									return await t.translate(
+										text,
+										signal ? { signal } : undefined,
+									);
+								} finally {
+									t.destroy();
+								}
+							})(),
+							(error) =>
+								error instanceof Error
+									? error
+									: new Error(`Translation failed: ${String(error)}`),
+						),
+					createSession: () =>
+						ResultAsync.fromPromise(Translator.create(options), (error) =>
+							error instanceof Error
+								? error
+								: new Error(
+										`Failed to create Translator session: ${String(error)}`,
+									),
+						),
+				};
+
+				return instance;
 			})(),
 			(error) =>
 				error instanceof Error
 					? error
-					: new Error(`Translation failed: ${String(error)}`),
+					: new Error(`Failed to initialize Translator: ${String(error)}`),
 		),
 	);
 }

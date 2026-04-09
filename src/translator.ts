@@ -1,40 +1,36 @@
 /// <reference types="@types/dom-chromium-ai" />
 
 import * as Safe from "./translator-safe";
+import type { TranslatorInstance } from "./types";
 import { okOrThrow } from "./utils";
 
 /**
- * Checks availability of the Translator API for the given language pair.
- * @throws {Error} If availability check fails
+ * Initializes the Translator API for a specific language pair by checking
+ * availability and triggering model download.
+ * Returns an instance object with `.translate()` and `.createSession()` methods.
+ *
+ * @param options Language pair options (sourceLanguage, targetLanguage)
+ * @returns A TranslatorInstance
+ * @throws {Error} If initialization fails
+ *
+ * @example
+ * const translator = await initTranslator({ sourceLanguage: "en", targetLanguage: "es" });
+ * const translated = await translator.translate("Hello");
  */
-export async function availability(
+export async function initTranslator(
 	options: TranslatorCreateCoreOptions,
-): Promise<Availability> {
-	const result = await Safe.availability(options);
-	return okOrThrow(result);
-}
+): Promise<TranslatorInstance> {
+	const safeInstance = await Safe.initTranslator(options);
+	const safe = okOrThrow(safeInstance);
 
-/**
- * Creates a reusable Translator instance.
- * The caller is responsible for calling `.destroy()` when done.
- * @throws {Error} If creation fails
- */
-export async function create(
-	options: TranslatorCreateOptions,
-): Promise<Translator> {
-	const result = await Safe.create(options);
-	return okOrThrow(result);
-}
-
-/**
- * One-shot translate: creates a Translator, translates text, and destroys the instance.
- * @throws {Error} If translation fails
- */
-export async function translate(
-	text: string,
-	options: TranslatorCreateCoreOptions,
-	signal?: AbortSignal,
-): Promise<string> {
-	const result = await Safe.translate(text, options, signal);
-	return okOrThrow(result);
+	return {
+		translate: async (text, signal) => {
+			const result = await safe.translate(text, signal);
+			return okOrThrow(result);
+		},
+		createSession: async () => {
+			const result = await safe.createSession();
+			return okOrThrow(result);
+		},
+	};
 }
