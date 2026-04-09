@@ -1,6 +1,6 @@
 /// <reference types="@types/dom-chromium-ai" />
 
-import { ResultAsync } from "neverthrow";
+import { errAsync, ResultAsync } from "neverthrow";
 import type { SafeSummarizerInstance } from "./types";
 import { checkAvailability } from "./utils";
 
@@ -26,6 +26,14 @@ export function initSummarizer(
 		outputLanguage: "en",
 		...createOptions,
 	};
+
+	if (typeof Summarizer === "undefined") {
+		return errAsync(
+			new Error(
+				"Summarizer API is not available in this browser. Ensure you are using Chrome 138+ or a supported Chromium-based browser.",
+			),
+		);
+	}
 
 	return checkAvailability(
 		() => Summarizer.availability(mergedOptions),

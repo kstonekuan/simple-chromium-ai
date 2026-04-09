@@ -1,6 +1,6 @@
 /// <reference types="@types/dom-chromium-ai" />
 
-import { ResultAsync } from "neverthrow";
+import { errAsync, ResultAsync } from "neverthrow";
 import type { SafeDetectorInstance } from "./types";
 import { checkAvailability } from "./utils";
 
@@ -21,6 +21,14 @@ import { checkAvailability } from "./utils";
 export function initDetector(
 	options?: LanguageDetectorCreateCoreOptions,
 ): ResultAsync<SafeDetectorInstance, Error> {
+	if (typeof LanguageDetector === "undefined") {
+		return errAsync(
+			new Error(
+				"Language Detector API is not available in this browser. Ensure you are using Chrome 138+ or a supported Chromium-based browser.",
+			),
+		);
+	}
+
 	return checkAvailability(
 		() => LanguageDetector.availability(options),
 		"Language Detector",

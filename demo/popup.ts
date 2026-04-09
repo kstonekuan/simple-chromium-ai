@@ -29,6 +29,12 @@ const inputDetect = document.getElementById(
 ) as HTMLTextAreaElement;
 
 // Summarize elements
+const summaryType = document.getElementById(
+	"summary-type",
+) as HTMLSelectElement;
+const summaryLength = document.getElementById(
+	"summary-length",
+) as HTMLSelectElement;
 const inputSummarize = document.getElementById(
 	"input-summarize",
 ) as HTMLTextAreaElement;
@@ -58,22 +64,22 @@ apiSelect?.addEventListener("change", () => {
 let translatorSourceLang = "";
 let translatorTargetLang = "";
 
+// Track the summarizer options it was initialized with
+let summarizerType = "";
+let summarizerLength = "";
+
 // Initialize APIs (except translator, which inits on first translate)
 async function init() {
 	if (statusEl) statusEl.textContent = "Initializing APIs...";
 
 	try {
-		const [aiResult, detectorResult, summarizerResult] =
-			await Promise.allSettled([
-				ChromiumAI.initLanguageModel("You are a helpful assistant"),
-				ChromiumAI.initDetector(),
-				ChromiumAI.initSummarizer(),
-			]);
+		const [aiResult, detectorResult] = await Promise.allSettled([
+			ChromiumAI.initLanguageModel("You are a helpful assistant"),
+			ChromiumAI.initDetector(),
+		]);
 
 		if (aiResult.status === "fulfilled") ai = aiResult.value;
 		if (detectorResult.status === "fulfilled") detector = detectorResult.value;
-		if (summarizerResult.status === "fulfilled")
-			summarizer = summarizerResult.value;
 
 		if (statusEl) statusEl.textContent = "Chrome AI is ready!";
 		if (interfaceEl) interfaceEl.style.display = "block";
@@ -144,9 +150,22 @@ async function handleDetect() {
 
 async function handleSummarize() {
 	const text = inputSummarize?.value.trim();
-	if (!text || !summarizer) return;
+	if (!text) return;
 
 	try {
+		// Re-init summarizer if type or length changed or not yet initialized
+		if (
+			!summarizer ||
+			summarizerType !== summaryType.value ||
+			summarizerLength !== summaryLength.value
+		) {
+			summarizerType = summaryType.value;
+			summarizerLength = summaryLength.value;
+			summarizer = await ChromiumAI.initSummarizer({
+				type: summarizerType as "tldr" | "key-points" | "teaser" | "headline",
+				length: summarizerLength as "short" | "medium" | "long",
+			});
+		}
 		const summary = await summarizer.summarize(text);
 		if (responseEl) responseEl.textContent = summary;
 	} catch (error) {

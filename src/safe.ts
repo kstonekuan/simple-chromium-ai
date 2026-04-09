@@ -36,7 +36,10 @@ export function initLanguageModel(
 				);
 			}
 
-			const availability = await LanguageModel.availability();
+			const availability = await LanguageModel.availability({
+				expectedInputs: [{ type: "text", languages: expectedInputLanguages }],
+				expectedOutputs: [{ type: "text", languages: expectedOutputLanguages }],
+			});
 
 			const canProceed = match(availability)
 				.with("unavailable", () =>
@@ -56,9 +59,7 @@ export function initLanguageModel(
 			// Trigger actual model download by creating and immediately destroying a session
 			try {
 				const session = await LanguageModel.create({
-					expectedInputs: [
-						{ type: "text", languages: expectedInputLanguages },
-					],
+					expectedInputs: [{ type: "text", languages: expectedInputLanguages }],
 					expectedOutputs: [
 						{ type: "text", languages: expectedOutputLanguages },
 					],
@@ -178,19 +179,22 @@ function withSession<T>(
 	callback: (session: LanguageModel) => ResultAsync<T, Error>,
 	options?: LanguageModelCreateOptions,
 ): ResultAsync<T, Error> {
-	return createSession(systemPrompt, expectedInputLanguages, expectedOutputLanguages, options).andThen(
-		(session) => {
-			return callback(session)
-				.map((value) => {
-					session.destroy();
-					return value;
-				})
-				.mapErr((error) => {
-					session.destroy();
-					return error;
-				});
-		},
-	);
+	return createSession(
+		systemPrompt,
+		expectedInputLanguages,
+		expectedOutputLanguages,
+		options,
+	).andThen((session) => {
+		return callback(session)
+			.map((value) => {
+				session.destroy();
+				return value;
+			})
+			.mapErr((error) => {
+				session.destroy();
+				return error;
+			});
+	});
 }
 
 function checkTokenUsage(
@@ -207,9 +211,9 @@ function checkTokenUsage(
 		(session) => {
 			return ResultAsync.fromSafePromise(
 				(async () => {
-					const promptTokens = await session.measureInputUsage(promptText);
-					const maxTokens = session.inputQuota || 0;
-					const tokensSoFar = session.inputUsage || 0;
+					const promptTokens = await session.measureContextUsage(promptText);
+					const maxTokens = session.contextWindow || 0;
+					const tokensSoFar = session.contextUsage || 0;
 					const tokensAvailable = maxTokens - tokensSoFar;
 
 					return {

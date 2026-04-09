@@ -1,6 +1,6 @@
 /// <reference types="@types/dom-chromium-ai" />
 
-import { ResultAsync } from "neverthrow";
+import { errAsync, ResultAsync } from "neverthrow";
 import type { SafeTranslatorInstance } from "./types";
 import { checkAvailability } from "./utils";
 
@@ -22,6 +22,14 @@ import { checkAvailability } from "./utils";
 export function initTranslator(
 	options: TranslatorCreateCoreOptions,
 ): ResultAsync<SafeTranslatorInstance, Error> {
+	if (typeof Translator === "undefined") {
+		return errAsync(
+			new Error(
+				"Translator API is not available in this browser. Ensure you are using Chrome 138+ or a supported Chromium-based browser.",
+			),
+		);
+	}
+
 	return checkAvailability(
 		() => Translator.availability(options),
 		"Translator",
