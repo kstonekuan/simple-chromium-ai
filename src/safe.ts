@@ -2,30 +2,40 @@
 
 import { err, ok, ResultAsync } from "neverthrow";
 import { match } from "ts-pattern";
-import type { SafeLanguageModelInstance, TokenUsageInfo } from "./types";
+import type {
+	LanguageModelInitOptions,
+	SafeLanguageModelInstance,
+	TokenUsageInfo,
+} from "./types";
 
 /**
  * Initializes the LanguageModel API by checking availability and triggering model download.
  * Returns a safe instance object with `.prompt()`, `.createSession()`, `.withSession()`,
  * and `.checkTokenUsage()` methods that return ResultAsync.
  *
- * @param systemPrompt Optional system prompt that will be used for all sessions
- * @param expectedInputLanguages Expected input languages (defaults to ["en"])
- * @param expectedOutputLanguages Expected output languages (defaults to ["en"])
+ * Init is only about capability (can the model run?), not behavior (what should it say?).
+ * Pass system prompts via `createSession()` or the `sessionOptions` parameter on `.prompt()`.
+ *
+ * @param options Optional init options (expectedInputs, expectedOutputs, monitor, signal)
  * @returns A Result containing a SafeLanguageModelInstance or an Error
  *
  * @example
- * const result = await initLanguageModel("You are a helpful assistant");
+ * const result = await initLanguageModel();
  * result.match(
  *   (ai) => ai.prompt("Hello!"),
  *   (error) => console.error(error.message)
  * );
  */
 export function initLanguageModel(
-	systemPrompt?: string,
-	expectedInputLanguages: string[] = ["en"],
-	expectedOutputLanguages: string[] = ["en"],
+	options?: LanguageModelInitOptions,
 ): ResultAsync<SafeLanguageModelInstance, Error> {
+	const expectedInputs = options?.expectedInputs ?? [
+		{ type: "text" as const, languages: ["en"] },
+	];
+	const expectedOutputs = options?.expectedOutputs ?? [
+		{ type: "text" as const, languages: ["en"] },
+	];
+
 	return new ResultAsync(
 		(async () => {
 			if (typeof LanguageModel === "undefined") {
@@ -37,8 +47,8 @@ export function initLanguageModel(
 			}
 
 			const availability = await LanguageModel.availability({
-				expectedInputs: [{ type: "text", languages: expectedInputLanguages }],
-				expectedOutputs: [{ type: "text", languages: expectedOutputLanguages }],
+				expectedInputs,
+				expectedOutputs,
 			});
 
 			const canProceed = match(availability)
@@ -59,10 +69,10 @@ export function initLanguageModel(
 			// Trigger actual model download by creating and immediately destroying a session
 			try {
 				const session = await LanguageModel.create({
-					expectedInputs: [{ type: "text", languages: expectedInputLanguages }],
-					expectedOutputs: [
-						{ type: "text", languages: expectedOutputLanguages },
-					],
+					expectedInputs,
+					expectedOutputs,
+					monitor: options?.monitor,
+					signal: options?.signal,
 				});
 				session.destroy();
 			} catch (error) {
@@ -76,34 +86,26 @@ export function initLanguageModel(
 			const instance: SafeLanguageModelInstance = {
 				prompt: (text, timeout, promptOptions, sessionOptions) =>
 					prompt(
-						systemPrompt,
-						expectedInputLanguages,
-						expectedOutputLanguages,
+						expectedInputs,
+						expectedOutputs,
 						text,
 						timeout,
 						promptOptions,
 						sessionOptions,
 					),
-				createSession: (options) =>
-					createSession(
-						systemPrompt,
-						expectedInputLanguages,
-						expectedOutputLanguages,
-						options,
-					),
-				withSession: (callback, options) =>
+				createSession: (sessionOptions) =>
+					createSession(expectedInputs, expectedOutputs, sessionOptions),
+				withSession: (callback, sessionOptions) =>
 					withSession(
-						systemPrompt,
-						expectedInputLanguages,
-						expectedOutputLanguages,
+						expectedInputs,
+						expectedOutputs,
 						callback,
-						options,
+						sessionOptions,
 					),
 				checkTokenUsage: (promptText, sessionOptions) =>
 					checkTokenUsage(
-						systemPrompt,
-						expectedInputLanguages,
-						expectedOutputLanguages,
+						expectedInputs,
+						expectedOutputs,
 						promptText,
 						sessionOptions,
 					),
@@ -118,9 +120,8 @@ export function initLanguageModel(
 export const initialize = initLanguageModel;
 
 function createSession(
-	systemPrompt: string | undefined,
-	expectedInputLanguages: string[],
-	expectedOutputLanguages: string[],
+	expectedInputs: LanguageModelExpected[],
+	expectedOutputs: LanguageModelExpected[],
 	options?: LanguageModelCreateOptions,
 ): ResultAsync<LanguageModel, Error> {
 	return new ResultAsync(
@@ -130,33 +131,12 @@ function createSession(
 					...options,
 				};
 
-				if (
-					!mergedOptions.expectedInputs &&
-					expectedInputLanguages.length > 0
-				) {
-					mergedOptions.expectedInputs = [
-						{ type: "text", languages: expectedInputLanguages },
-					];
+				if (!mergedOptions.expectedInputs && expectedInputs.length > 0) {
+					mergedOptions.expectedInputs = expectedInputs;
 				}
 
-				if (
-					!mergedOptions.expectedOutputs &&
-					expectedOutputLanguages.length > 0
-				) {
-					mergedOptions.expectedOutputs = [
-						{ type: "text", languages: expectedOutputLanguages },
-					];
-				}
-
-				if (options?.initialPrompts && options.initialPrompts.length > 0) {
-					mergedOptions.initialPrompts = options.initialPrompts;
-				} else if (systemPrompt) {
-					mergedOptions.initialPrompts = [
-						{
-							role: "system" as LanguageModelSystemMessageRole,
-							content: systemPrompt,
-						},
-					];
+				if (!mergedOptions.expectedOutputs && expectedOutputs.length > 0) {
+					mergedOptions.expectedOutputs = expectedOutputs;
 				}
 
 				const session = await LanguageModel.create(mergedOptions);
@@ -173,41 +153,35 @@ function createSession(
 }
 
 function withSession<T>(
-	systemPrompt: string | undefined,
-	expectedInputLanguages: string[],
-	expectedOutputLanguages: string[],
+	expectedInputs: LanguageModelExpected[],
+	expectedOutputs: LanguageModelExpected[],
 	callback: (session: LanguageModel) => ResultAsync<T, Error>,
 	options?: LanguageModelCreateOptions,
 ): ResultAsync<T, Error> {
-	return createSession(
-		systemPrompt,
-		expectedInputLanguages,
-		expectedOutputLanguages,
-		options,
-	).andThen((session) => {
-		return callback(session)
-			.map((value) => {
-				session.destroy();
-				return value;
-			})
-			.mapErr((error) => {
-				session.destroy();
-				return error;
-			});
-	});
+	return createSession(expectedInputs, expectedOutputs, options).andThen(
+		(session) => {
+			return callback(session)
+				.map((value) => {
+					session.destroy();
+					return value;
+				})
+				.mapErr((error) => {
+					session.destroy();
+					return error;
+				});
+		},
+	);
 }
 
 function checkTokenUsage(
-	systemPrompt: string | undefined,
-	expectedInputLanguages: string[],
-	expectedOutputLanguages: string[],
+	expectedInputs: LanguageModelExpected[],
+	expectedOutputs: LanguageModelExpected[],
 	promptText: string,
 	sessionOptions?: LanguageModelCreateOptions,
 ): ResultAsync<TokenUsageInfo, Error> {
 	return withSession(
-		systemPrompt,
-		expectedInputLanguages,
-		expectedOutputLanguages,
+		expectedInputs,
+		expectedOutputs,
 		(session) => {
 			return ResultAsync.fromSafePromise(
 				(async () => {
@@ -231,18 +205,16 @@ function checkTokenUsage(
 }
 
 function prompt(
-	systemPrompt: string | undefined,
-	expectedInputLanguages: string[],
-	expectedOutputLanguages: string[],
+	expectedInputs: LanguageModelExpected[],
+	expectedOutputs: LanguageModelExpected[],
 	text: string,
 	timeout?: number,
 	promptOptions?: LanguageModelPromptOptions,
 	sessionOptions?: LanguageModelCreateOptions,
 ): ResultAsync<string, Error> {
 	return withSession(
-		systemPrompt,
-		expectedInputLanguages,
-		expectedOutputLanguages,
+		expectedInputs,
+		expectedOutputs,
 		(session) => {
 			let timeoutId: ReturnType<typeof setTimeout> | null = null;
 

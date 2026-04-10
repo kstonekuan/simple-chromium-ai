@@ -74,7 +74,7 @@ async function init() {
 
 	try {
 		const [aiResult, detectorResult] = await Promise.allSettled([
-			ChromiumAI.initLanguageModel("You are a helpful assistant"),
+			ChromiumAI.initLanguageModel(),
 			ChromiumAI.initDetector(),
 		]);
 
@@ -94,7 +94,11 @@ async function handlePrompt() {
 	if (!text || !ai) return;
 
 	try {
-		const response = await ai.prompt(text);
+		const response = await ai.prompt(text, undefined, undefined, {
+			initialPrompts: [
+				{ role: "system", content: "You are a helpful assistant." },
+			],
+		});
 		if (responseEl) responseEl.textContent = response;
 	} catch (error) {
 		if (responseEl)

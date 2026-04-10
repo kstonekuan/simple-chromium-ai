@@ -19,7 +19,7 @@ import { checkAvailability } from "./utils";
  * );
  */
 export function initDetector(
-	options?: LanguageDetectorCreateCoreOptions,
+	options?: LanguageDetectorCreateOptions,
 ): ResultAsync<SafeDetectorInstance, Error> {
 	if (typeof LanguageDetector === "undefined") {
 		return errAsync(

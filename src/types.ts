@@ -14,6 +14,18 @@ export interface TokenUsageInfo {
 }
 
 /**
+ * Options for initializing the LanguageModel API.
+ * Only includes fields that affect model availability and download,
+ * not session behavior (system prompt, temperature, etc.).
+ */
+export interface LanguageModelInitOptions {
+	expectedInputs?: LanguageModelExpected[];
+	expectedOutputs?: LanguageModelExpected[];
+	monitor?: CreateMonitorCallback;
+	signal?: AbortSignal;
+}
+
+/**
  * An initialized LanguageModel instance with bound methods.
  * Returned by `initLanguageModel()`. The existence of this object
  * proves the model has been downloaded and is ready to use.

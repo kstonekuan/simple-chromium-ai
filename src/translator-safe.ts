@@ -20,7 +20,7 @@ import { checkAvailability } from "./utils";
  * );
  */
 export function initTranslator(
-	options: TranslatorCreateCoreOptions,
+	options: TranslatorCreateOptions,
 ): ResultAsync<SafeTranslatorInstance, Error> {
 	if (typeof Translator === "undefined") {
 		return errAsync(

@@ -17,7 +17,7 @@ import { okOrThrow } from "./utils";
  * const detections = await detector.detect("Bonjour le monde");
  */
 export async function initDetector(
-	options?: LanguageDetectorCreateCoreOptions,
+	options?: LanguageDetectorCreateOptions,
 ): Promise<DetectorInstance> {
 	const safeInstance = await Safe.initDetector(options);
 	const safe = okOrThrow(safeInstance);

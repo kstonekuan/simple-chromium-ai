@@ -41,7 +41,7 @@ export function initSummarizer(
 	).andThen(() =>
 		ResultAsync.fromPromise(
 			(async () => {
-				// Trigger actual model download
+				// Trigger actual model download (pass monitor/signal for download progress)
 				const summarizer = await Summarizer.create(mergedOptions);
 				summarizer.destroy();
 

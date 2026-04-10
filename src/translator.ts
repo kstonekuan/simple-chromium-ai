@@ -18,7 +18,7 @@ import { okOrThrow } from "./utils";
  * const translated = await translator.translate("Hello");
  */
 export async function initTranslator(
-	options: TranslatorCreateCoreOptions,
+	options: TranslatorCreateOptions,
 ): Promise<TranslatorInstance> {
 	const safeInstance = await Safe.initTranslator(options);
 	const safe = okOrThrow(safeInstance);

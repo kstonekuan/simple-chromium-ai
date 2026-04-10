@@ -12,26 +12,30 @@ export function okOrThrow<T, E>(result: Result<T, E>): T {
 	);
 }
 
+export type ReadyAvailability = "available" | "downloadable" | "downloading";
+
 export function checkAvailability(
 	availabilityFn: () => Promise<Availability>,
 	apiName: string,
-): ResultAsync<void, Error> {
+): ResultAsync<ReadyAvailability, Error> {
 	return new ResultAsync(
-		(async () => {
+		(async (): Promise<Result<ReadyAvailability, Error>> => {
 			try {
 				const availability = await availabilityFn();
 				return match(availability)
 					.with("unavailable", () =>
-						err(
+						err<ReadyAvailability, Error>(
 							new Error(
 								`${apiName} API is present but the model is unavailable on this device.`,
 							),
 						),
 					)
-					.with("downloadable", "downloading", "available", () => ok(undefined))
+					.with("downloadable", "downloading", "available", (a) =>
+						ok<ReadyAvailability, Error>(a),
+					)
 					.exhaustive();
 			} catch (error) {
-				return err(
+				return err<ReadyAvailability, Error>(
 					error instanceof Error
 						? error
 						: new Error(

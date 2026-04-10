@@ -8,7 +8,7 @@ import { initSummarizer as _initSummarizer } from "./summarizer";
 import { initSummarizer as _safeInitSummarizer } from "./summarizer-safe";
 import { initTranslator as _initTranslator } from "./translator";
 import { initTranslator as _safeInitTranslator } from "./translator-safe";
-import type { LanguageModelInstance } from "./types";
+import type { LanguageModelInitOptions, LanguageModelInstance } from "./types";
 import { okOrThrow } from "./utils";
 
 // Re-export Result types for users who want them
@@ -18,6 +18,7 @@ export { err, ok, Result, ResultAsync } from "neverthrow";
 export type {
 	DetectorInstance,
 	DetectResult,
+	LanguageModelInitOptions,
 	LanguageModelInstance,
 	PromptResult,
 	SafeDetectorInstance,
@@ -36,22 +37,23 @@ export type {
 /**
  * Initializes the LanguageModel API. Triggers model download and returns an instance
  * with `.prompt()`, `.createSession()`, `.withSession()`, `.checkTokenUsage()` methods.
+ *
+ * Init is only about capability (can the model run?), not behavior (what should it say?).
+ * Pass system prompts via `createSession()` or the `sessionOptions` parameter on `.prompt()`.
+ *
+ * @param options Optional init options (expectedInputs, expectedOutputs, monitor, signal)
  * @throws {Error} If initialization fails
  *
  * @example
- * const ai = await initLanguageModel("You are a helpful assistant");
- * const response = await ai.prompt("Hello!");
+ * const ai = await initLanguageModel();
+ * const session = await ai.createSession({
+ *   initialPrompts: [{ role: "system", content: "You are a helpful assistant" }],
+ * });
  */
 export async function initLanguageModel(
-	systemPrompt?: string,
-	expectedInputLanguages?: string[],
-	expectedOutputLanguages?: string[],
+	options?: LanguageModelInitOptions,
 ): Promise<LanguageModelInstance> {
-	const safeResult = await _safeInitLanguageModel(
-		systemPrompt,
-		expectedInputLanguages,
-		expectedOutputLanguages,
-	);
+	const safeResult = await _safeInitLanguageModel(options);
 	const safe = okOrThrow(safeResult);
 
 	return {
@@ -106,14 +108,16 @@ export { initTranslator as safeInitTranslator } from "./translator-safe";
  * import ChromiumAI from 'simple-chromium-ai';
  *
  * // Default API (throws errors)
- * const ai = await ChromiumAI.initLanguageModel("You are helpful");
- * const response = await ai.prompt("Hello!");
+ * const ai = await ChromiumAI.initLanguageModel();
+ * const session = await ai.createSession({
+ *   initialPrompts: [{ role: "system", content: "You are helpful" }],
+ * });
  *
  * const translator = await ChromiumAI.initTranslator({ sourceLanguage: "en", targetLanguage: "es" });
  * const translated = await translator.translate("Hello");
  *
  * // Safe API (returns Results)
- * const result = await ChromiumAI.Safe.initLanguageModel("You are helpful");
+ * const result = await ChromiumAI.Safe.initLanguageModel();
  * result.match(
  *   (ai) => ai.prompt("Hello!"),
  *   (error) => console.error(error.message)
