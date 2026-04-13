@@ -6,8 +6,9 @@ A lightweight TypeScript wrapper for Chrome's built-in AI APIs (Prompt, Translat
 
 Chrome's native AI APIs are powerful but require careful initialization and session management. This wrapper provides:
 
+- **Parse, don't validate** - Initialization ensures the model is downloaded and returns an object you _must_ use, making it impossible to skip the readiness check
 - **Automatic error handling** - Graceful failures with clear messages
-- **Simplified API** - Common tasks in one function call
+- **Simplified API** - Common tasks in one method call
 - **Safe API variant** - Result types instead of throwing
 
 For advanced use cases requiring more control, use the [original Chrome AI APIs](https://developer.chrome.com/docs/ai/built-in-apis) directly.
@@ -18,22 +19,22 @@ For advanced use cases requiring more control, use the [original Chrome AI APIs]
 npm install simple-chromium-ai
 ```
 
-```javascript
-import { translate, detect, summarize } from 'simple-chromium-ai';
-
-// These just work — no initialization needed
-const translated = await translate("Hello", { sourceLanguage: "en", targetLanguage: "es" });
-const detections = await detect("Bonjour le monde");
-const summary = await summarize("Long article...", { type: "tldr" });
-```
-
-The Prompt API requires initialization since it manages session state:
+Every API requires initialization before use. Init triggers the model download and returns an object with the API methods:
 
 ```javascript
-import ChromiumAI from 'simple-chromium-ai';
+import { initLanguageModel, initTranslator, initDetector, initSummarizer } from 'simple-chromium-ai';
 
-const ai = await ChromiumAI.initialize("You are a helpful assistant");
-const response = await ChromiumAI.prompt(ai, "Write a haiku");
+const ai = await initLanguageModel("You are a helpful assistant");
+const response = await ai.prompt("Write a haiku");
+
+const translator = await initTranslator({ sourceLanguage: "en", targetLanguage: "es" });
+const translated = await translator.translate("Hello");
+
+const detector = await initDetector();
+const detections = await detector.detect("Bonjour le monde");
+
+const summarizer = await initSummarizer({ type: "tldr" });
+const summary = await summarizer.summarize("Long article...");
 ```
 
 ## Prerequisites
@@ -44,22 +45,20 @@ const response = await ChromiumAI.prompt(ai, "Write a haiku");
 
 ## Prompt API
 
-The Prompt API requires initializing an instance with a system prompt. The instance is then passed to all subsequent calls.
-
 ### Initialize
 ```typescript
-const ai = await ChromiumAI.initialize(
+const ai = await initLanguageModel(
   systemPrompt?: string,
+  expectedInputLanguages?: string[], // defaults to ["en"]
   expectedOutputLanguages?: string[] // defaults to ["en"]
 );
 ```
 
-The `expectedOutputLanguages` parameter tells Chrome what language(s) the model should output.
+The `expectedInputLanguages` parameter tells Chrome what language(s) the user prompts will be in. The `expectedOutputLanguages` parameter tells Chrome what language(s) the model should output.
 
 ### Prompt
 ```typescript
-const response = await ChromiumAI.prompt(
-  ai,
+const response = await ai.prompt(
   "Your prompt",
   timeout?: number,
   promptOptions?: LanguageModelPromptOptions, // signal, responseConstraint, etc.
@@ -70,25 +69,25 @@ const response = await ChromiumAI.prompt(
 ### Session Management
 ```typescript
 // Create reusable session (maintains conversation context)
-const session = await ChromiumAI.createSession(ai);
+const session = await ai.createSession();
 const response1 = await session.prompt("Hello");
 const response2 = await session.prompt("Follow up");
 session.destroy();
 
 // Override the instance's system prompt for this session
-const customSession = await ChromiumAI.createSession(ai, {
+const customSession = await ai.createSession({
   initialPrompts: [{ role: 'system', content: 'You are a pirate' }]
 });
 
 // Or use withSession for automatic cleanup
-const result = await ChromiumAI.withSession(ai, async (session) => {
+const result = await ai.withSession(async (session) => {
   return await session.prompt("Hello");
 });
 ```
 
 ### Token Management
 ```typescript
-const usage = await ChromiumAI.checkTokenUsage(ai, "Long text...");
+const usage = await ai.checkTokenUsage("Long text...");
 if (!usage.willFit) {
   // Prompt is too long for the context window
 }
@@ -96,8 +95,7 @@ if (!usage.willFit) {
 
 ### Structured Output
 ```javascript
-const response = await ChromiumAI.prompt(
-  ai,
+const response = await ai.prompt(
   "Analyze the sentiment: 'I love this!'",
   undefined,
   { responseConstraint: {
@@ -116,8 +114,7 @@ const result = JSON.parse(response);
 ```javascript
 const controller = new AbortController();
 
-const response = await ChromiumAI.prompt(
-  ai,
+const response = await ai.prompt(
   "Write a detailed analysis...",
   undefined,
   { signal: controller.signal }
@@ -130,82 +127,94 @@ controller.abort();
 ## Translator API
 
 ```typescript
-import { translate } from 'simple-chromium-ai';
+import { initTranslator } from 'simple-chromium-ai';
 
-const translated = await translate("Hello", {
+const translator = await initTranslator({
   sourceLanguage: "en",
   targetLanguage: "es",
 });
+
+// One-shot (creates and destroys native instance internally)
+const translated = await translator.translate("Hello");
+
+// Reusable session for multiple translations
+const session = await translator.createSession();
+const result1 = await session.translate("Hello");
+const result2 = await session.translate("Goodbye");
+session.destroy();
 ```
 
-For multiple translations with the same language pair, create a reusable instance:
-
-```typescript
-import { Translator } from 'simple-chromium-ai';
-
-const translator = await Translator.create({
-  sourceLanguage: "en",
-  targetLanguage: "ja",
-});
-const result1 = await translator.translate("Hello");
-const result2 = await translator.translate("Goodbye");
-translator.destroy();
-```
+Each translator is locked to a specific language pair. Initialize a new one for different pairs.
 
 ## Language Detector API
 
 ```typescript
-import { detect } from 'simple-chromium-ai';
+import { initDetector } from 'simple-chromium-ai';
 
-const detections = await detect("Bonjour le monde");
+const detector = await initDetector();
+const detections = await detector.detect("Bonjour le monde");
 // Returns: [{ detectedLanguage: "fr", confidence: 0.95 }, ...]
+
+// Reusable session
+const session = await detector.createSession();
+const r1 = await session.detect("Hello");
+const r2 = await session.detect("Hola");
+session.destroy();
 ```
 
 ## Summarizer API
 
 ```typescript
-import { summarize } from 'simple-chromium-ai';
+import { initSummarizer } from 'simple-chromium-ai';
 
-const summary = await summarize("Long article text...", {
+const summarizer = await initSummarizer({
   type: "tldr",       // "tldr" | "key-points" | "teaser" | "headline"
   length: "medium",   // "short" | "medium" | "long"
 });
+
+// One-shot
+const summary = await summarizer.summarize("Long article text...");
+
+// Reusable session
+const session = await summarizer.createSession();
+const summary1 = await session.summarize("First article...");
+const summary2 = await session.summarize("Second article...");
+session.destroy();
 ```
 
-For multiple summarizations with the same options, create a reusable instance:
+## Shared Models
 
-```typescript
-import { Summarizer } from 'simple-chromium-ai';
-
-const summarizer = await Summarizer.create({ type: "key-points", length: "short" });
-const summary1 = await summarizer.summarize("First article...");
-const summary2 = await summarizer.summarize("Second article...");
-summarizer.destroy();
-```
+The Prompt API and Summarizer API share the same underlying model (~4GB). Initializing either one triggers the same model download. The Translator and Language Detector APIs each have their own models.
 
 ## Safe API
 
-Every function has a Safe variant that returns Result types instead of throwing:
+Every init function has a Safe variant that returns Result types instead of throwing:
 
 ```typescript
-import { safeTranslate, safeDetect, safeSummarize } from 'simple-chromium-ai';
+import { safeInitTranslator, safeInitDetector, safeInitSummarizer } from 'simple-chromium-ai';
 
-const result = await safeTranslate("Hello", { sourceLanguage: "en", targetLanguage: "es" });
+const result = await safeInitTranslator({ sourceLanguage: "en", targetLanguage: "es" });
 result.match(
-  (text) => console.log(text),
+  (translator) => {
+    // Methods also return ResultAsync
+    translator.translate("Hello").match(
+      (text) => console.log(text),
+      (error) => console.error(error.message)
+    );
+  },
   (error) => console.error(error.message)
 );
 ```
 
-The Prompt API safe variants are available via the default export:
+The Prompt API safe variant:
 
 ```typescript
-import ChromiumAI from 'simple-chromium-ai';
+import { safeInitLanguageModel } from 'simple-chromium-ai';
 
-const result = await ChromiumAI.Safe.initialize("You are helpful");
+const result = await safeInitLanguageModel("You are helpful");
 result.match(
   async (ai) => {
-    const response = await ChromiumAI.Safe.prompt(ai, "Hello");
+    const response = await ai.prompt("Hello");
     response.match(
       (value) => console.log(value),
       (error) => console.error(error.message)
@@ -213,6 +222,14 @@ result.match(
   },
   (error) => console.error(error.message)
 );
+```
+
+Or use the default export namespace:
+
+```typescript
+import ChromiumAI from 'simple-chromium-ai';
+
+const result = await ChromiumAI.Safe.initLanguageModel("You are helpful");
 ```
 
 ## Limitations
@@ -262,7 +279,7 @@ npm run build
    });
    ```
 
-   The library also triggers downloads automatically when you call any API function.
+   The library also triggers downloads automatically during initialization.
 
 ## Resources
 

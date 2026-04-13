@@ -3,7 +3,14 @@
 	"name": "Chrome AI Demo",
 	"version": "1.0",
 	"description": "Minimal Chrome AI demo",
+	"permissions": ["sidePanel"],
+	"side_panel": {
+		"default_path": "popup.html"
+	},
 	"action": {
-		"default_popup": "popup.html"
+		"default_title": "Open Chrome AI Demo"
+	},
+	"background": {
+		"service_worker": "background.js"
 	}
 }

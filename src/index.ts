@@ -1,218 +1,142 @@
 /// <reference types="@types/dom-chromium-ai" />
 
 import { ResultAsync } from "neverthrow";
-import * as DetectorApi from "./detector";
-import * as DetectorSafe from "./detector-safe";
-import * as Safe from "./safe";
-import * as SummarizerApi from "./summarizer";
-import * as SummarizerSafe from "./summarizer-safe";
-import * as TranslatorApi from "./translator";
-import * as TranslatorSafe from "./translator-safe";
-import type { ChromiumAIInstance, TokenUsageInfo } from "./types";
+import { initDetector as _initDetector } from "./detector";
+import { initDetector as _safeInitDetector } from "./detector-safe";
+import { initLanguageModel as _safeInitLanguageModel } from "./safe";
+import { initSummarizer as _initSummarizer } from "./summarizer";
+import { initSummarizer as _safeInitSummarizer } from "./summarizer-safe";
+import { initTranslator as _initTranslator } from "./translator";
+import { initTranslator as _safeInitTranslator } from "./translator-safe";
+import type { LanguageModelInitOptions, LanguageModelInstance } from "./types";
 import { okOrThrow } from "./utils";
 
 // Re-export Result types for users who want them
 export { err, ok, Result, ResultAsync } from "neverthrow";
-export { detect } from "./detector";
-export { detect as safeDetect } from "./detector-safe";
-export { summarize } from "./summarizer";
-export { summarize as safeSummarize } from "./summarizer-safe";
-// Flat convenience exports (one-shot functions)
-export { translate } from "./translator";
-// Safe flat exports
-export { translate as safeTranslate } from "./translator-safe";
-// Re-export types for users
+
+// Re-export types
 export type {
-	ChromiumAIInstance,
+	DetectorInstance,
 	DetectResult,
+	LanguageModelInitOptions,
+	LanguageModelInstance,
 	PromptResult,
+	SafeDetectorInstance,
+	SafeLanguageModelInstance,
+	SafeSummarizerInstance,
+	SafeTranslatorInstance,
 	SummarizeResult,
+	SummarizerInstance,
 	TokenUsageInfo,
 	TranslateResult,
+	TranslatorInstance,
 } from "./types";
 
-// Namespace exports for advanced use (.create(), .availability())
-export {
-	DetectorApi as Detector,
-	SummarizerApi as Summarizer,
-	TranslatorApi as Translator,
-};
+// --- Throwing init exports ---
 
 /**
- * Initializes Chromium AI and returns an instance object that must be used with all other functions.
- * This is the default version that throws errors instead of returning Result types.
+ * Initializes the LanguageModel API. Triggers model download and returns an instance
+ * with `.prompt()`, `.createSession()`, `.withSession()`, `.checkTokenUsage()` methods.
  *
- * @see {@link Safe.initialize} for the safe version that returns Result types
- * @param systemPrompt Optional system prompt that will be used for all sessions
- * @returns A ChromiumAIInstance object
+ * Init is only about capability (can the model run?), not behavior (what should it say?).
+ * Pass system prompts via `createSession()` or the `sessionOptions` parameter on `.prompt()`.
+ *
+ * @param options Optional init options (expectedInputs, expectedOutputs, monitor, signal)
  * @throws {Error} If initialization fails
  *
  * @example
- * const ai = await initialize("You are a helpful assistant");
- */
-export async function initialize(
-	systemPrompt?: string,
-	expectedOutputLanguages?: string[],
-): Promise<ChromiumAIInstance> {
-	const result = await Safe.initialize(systemPrompt, expectedOutputLanguages);
-	return okOrThrow(result);
-}
-
-/**
- * Creates a reusable AI session using the initialized Chromium AI instance.
- * This is the default version that throws errors instead of returning Result types.
- *
- * @see {@link Safe.createSession} for the safe version that returns Result types
- * @returns Session object for multiple prompts
- * @throws {Error} If session creation fails
- *
- * @example
- * const session = await createSession(ai);
- * const response = await session.prompt("Hello!");
- * session.destroy();
- */
-export async function createSession(
-	instance: ChromiumAIInstance,
-	options?: LanguageModelCreateOptions,
-): Promise<LanguageModel> {
-	const result = await Safe.createSession(instance, options);
-	return okOrThrow(result);
-}
-
-/**
- * Executes a callback with a temporary session, ensuring proper cleanup.
- * This is the default version that throws errors instead of returning Result types.
- *
- * @see {@link Safe.withSession} for the safe version that returns Result types
- * @returns The result of the callback
- * @throws {Error} If session creation or callback execution fails
- *
- * @example
- * const tokenCount = await withSession(ai, async (session) => {
- *   return await session.measureInputUsage("Hello world");
+ * const ai = await initLanguageModel();
+ * const session = await ai.createSession({
+ *   initialPrompts: [{ role: "system", content: "You are a helpful assistant" }],
  * });
  */
-export async function withSession<T>(
-	instance: ChromiumAIInstance,
-	callback: (session: LanguageModel) => Promise<T>,
-	options?: LanguageModelCreateOptions,
-): Promise<T> {
-	const result = await Safe.withSession(
-		instance,
-		(session) =>
-			ResultAsync.fromPromise(callback(session), (error) =>
-				error instanceof Error ? error : new Error(String(error)),
-			),
-		options,
-	);
-	return okOrThrow(result);
+export async function initLanguageModel(
+	options?: LanguageModelInitOptions,
+): Promise<LanguageModelInstance> {
+	const safeResult = await _safeInitLanguageModel(options);
+	const safe = okOrThrow(safeResult);
+
+	return {
+		prompt: async (text, timeout, promptOptions, sessionOptions) => {
+			const result = await safe.prompt(
+				text,
+				timeout,
+				promptOptions,
+				sessionOptions,
+			);
+			return okOrThrow(result);
+		},
+		createSession: async (options) => {
+			const result = await safe.createSession(options);
+			return okOrThrow(result);
+		},
+		withSession: async (callback, options) => {
+			const result = await safe.withSession(
+				(session) =>
+					ResultAsync.fromPromise(callback(session), (error) =>
+						error instanceof Error ? error : new Error(String(error)),
+					),
+				options,
+			);
+			return okOrThrow(result);
+		},
+		checkTokenUsage: async (promptText, sessionOptions) => {
+			const result = await safe.checkTokenUsage(promptText, sessionOptions);
+			return okOrThrow(result);
+		},
+	};
 }
 
-/**
- * Checks token usage for a prompt without sending it.
- * This is the default version that throws errors instead of returning Result types.
- *
- * @see {@link Safe.checkTokenUsage} for the safe version that returns Result types
- * @returns Token usage information
- * @throws {Error} If token checking fails
- *
- * @example
- * const usage = await checkTokenUsage(ai, "Long prompt...");
- * console.log(`Prompt uses ${usage.promptTokens} tokens`);
- * if (usage.willFit) {
- *   const response = await prompt(ai, "Long prompt...");
- * }
- */
-export async function checkTokenUsage(
-	instance: ChromiumAIInstance,
-	prompt: string,
-	sessionOptions?: LanguageModelCreateOptions,
-): Promise<TokenUsageInfo> {
-	const result = await Safe.checkTokenUsage(instance, prompt, sessionOptions);
-	return okOrThrow(result);
-}
+export { initDetector } from "./detector";
+export { initSummarizer } from "./summarizer";
+export { initTranslator } from "./translator";
+
+// --- Safe init exports ---
+
+export { initDetector as safeInitDetector } from "./detector-safe";
+export { initLanguageModel as safeInitLanguageModel } from "./safe";
+export { initSummarizer as safeInitSummarizer } from "./summarizer-safe";
+export { initTranslator as safeInitTranslator } from "./translator-safe";
 
 /**
- * Performs a single prompt using the initialized Chromium AI instance.
- * This is the default version that throws errors instead of returning Result types.
+ * ChromiumAI namespace containing all SDK init functions.
  *
- * @see {@link Safe.prompt} for the safe version that returns Result types
- * @param instance The initialized Chromium AI instance
- * @param prompt The user's prompt
- * @param timeout Optional timeout in milliseconds
- * @param promptOptions Options for the prompt (signal, etc)
- * @param sessionOptions Additional session options (merged with instance system prompt)
- * @returns The AI's response
- * @throws {Error} If the prompt fails
+ * Every API requires initialization before use. Init triggers model download
+ * and returns an object with the API methods bound to it.
  *
- * @example
- * const response = await prompt(ai, "What is TypeScript?");
- *
- * @example
- * // With timeout
- * const response = await prompt(ai, "Explain quantum computing", 5000);
- */
-export async function prompt(
-	instance: ChromiumAIInstance,
-	prompt: string,
-	timeout?: number,
-	promptOptions?: LanguageModelPromptOptions,
-	sessionOptions?: LanguageModelCreateOptions,
-): Promise<string> {
-	const result = await Safe.prompt(
-		instance,
-		prompt,
-		timeout,
-		promptOptions,
-		sessionOptions,
-	);
-	return okOrThrow(result);
-}
-
-/**
- * ChromiumAI namespace containing all SDK functions for convenient access
  * @example
  * import ChromiumAI from 'simple-chromium-ai';
  *
  * // Default API (throws errors)
- * const ai = await ChromiumAI.initialize("You are helpful");
- * const response = await ChromiumAI.prompt(ai, "Hello!");
+ * const ai = await ChromiumAI.initLanguageModel();
+ * const session = await ai.createSession({
+ *   initialPrompts: [{ role: "system", content: "You are helpful" }],
+ * });
+ *
+ * const translator = await ChromiumAI.initTranslator({ sourceLanguage: "en", targetLanguage: "es" });
+ * const translated = await translator.translate("Hello");
  *
  * // Safe API (returns Results)
- * const result = await ChromiumAI.Safe.initialize("You are helpful");
- * if (result.isOk()) {
- *   const response = await ChromiumAI.Safe.prompt(result.value, "Hello!");
- * }
- *
- * // Translator
- * const translated = await ChromiumAI.Translator.translate("Hello", { sourceLanguage: "en", targetLanguage: "es" });
- *
- * // Language Detector
- * const results = await ChromiumAI.Detector.detect("Bonjour le monde");
- *
- * // Summarizer
- * const summary = await ChromiumAI.Summarizer.summarize("Long text...", { type: "tldr" });
+ * const result = await ChromiumAI.Safe.initLanguageModel();
+ * result.match(
+ *   (ai) => ai.prompt("Hello!"),
+ *   (error) => console.error(error.message)
+ * );
  */
 const ChromiumAI = {
-	// Safe API namespace
+	// Safe API namespace (returns ResultAsync)
 	Safe: {
-		...Safe,
-		Translator: TranslatorSafe,
-		Detector: DetectorSafe,
-		Summarizer: SummarizerSafe,
+		initLanguageModel: _safeInitLanguageModel,
+		initTranslator: _safeInitTranslator,
+		initDetector: _safeInitDetector,
+		initSummarizer: _safeInitSummarizer,
 	},
 
 	// Default API (throws errors)
-	initialize,
-	prompt,
-	createSession,
-	withSession,
-	checkTokenUsage,
-
-	// New API namespaces
-	Translator: TranslatorApi,
-	Detector: DetectorApi,
-	Summarizer: SummarizerApi,
+	initLanguageModel,
+	initTranslator: _initTranslator,
+	initDetector: _initDetector,
+	initSummarizer: _initSummarizer,
 };
 
 // Default export for convenience

@@ -1,78 +1,77 @@
 /// <reference types="@types/dom-chromium-ai" />
 
-import { ResultAsync } from "neverthrow";
-import type { SummarizeResult } from "./types";
+import { errAsync, ResultAsync } from "neverthrow";
+import type { SafeSummarizerInstance } from "./types";
 import { checkAvailability } from "./utils";
 
 /**
- * Checks availability of the Summarizer API.
- * Returns a Result containing the availability status.
+ * Initializes the Summarizer API by checking availability and triggering model download.
+ * Returns a safe instance object with `.summarize()` and `.createSession()` methods.
  *
- * @param options Optional options for type, format, length, etc.
- * @returns A Result containing the Availability status or an Error
- */
-export function availability(
-	options?: SummarizerCreateCoreOptions,
-): ResultAsync<Availability, Error> {
-	return ResultAsync.fromPromise(Summarizer.availability(options), (error) =>
-		error instanceof Error
-			? error
-			: new Error(`Failed to check Summarizer availability: ${String(error)}`),
-	);
-}
-
-/**
- * Creates a reusable Summarizer instance.
- * The caller is responsible for calling `.destroy()` when done.
- *
- * @param options Optional creation options (type, format, length, sharedContext)
- * @returns A Result containing a Summarizer instance or an Error
- */
-export function create(
-	options?: SummarizerCreateOptions,
-): ResultAsync<Summarizer, Error> {
-	return checkAvailability(
-		() => Summarizer.availability(options),
-		"Summarizer",
-	).andThen(() =>
-		ResultAsync.fromPromise(Summarizer.create(options), (error) =>
-			error instanceof Error
-				? error
-				: new Error(`Failed to create Summarizer: ${String(error)}`),
-		),
-	);
-}
-
-/**
- * One-shot summarize: creates a Summarizer, summarizes text, and destroys the instance.
- *
- * @param text The text to summarize
  * @param createOptions Optional creation options (type, format, length, sharedContext)
- * @param summarizeOptions Optional options for the summarize call (context, signal)
- * @returns A Result containing the summary or an Error
+ * @returns A Result containing a SafeSummarizerInstance or an Error
+ *
+ * @example
+ * const result = await initSummarizer({ type: "tldr" });
+ * result.match(
+ *   (summarizer) => summarizer.summarize("Long article..."),
+ *   (error) => console.error(error.message)
+ * );
  */
-export function summarize(
-	text: string,
+export function initSummarizer(
 	createOptions?: SummarizerCreateOptions,
-	summarizeOptions?: SummarizerSummarizeOptions,
-): SummarizeResult {
+): ResultAsync<SafeSummarizerInstance, Error> {
+	// Default outputLanguage to "en" if not specified
+	const mergedOptions: SummarizerCreateOptions = {
+		outputLanguage: "en",
+		...createOptions,
+	};
+
+	if (typeof Summarizer === "undefined") {
+		return errAsync(
+			new Error(
+				"Summarizer API is not available in this browser. Ensure you are using Chrome 138+ or a supported Chromium-based browser.",
+			),
+		);
+	}
+
 	return checkAvailability(
-		() => Summarizer.availability(createOptions),
+		() => Summarizer.availability(mergedOptions),
 		"Summarizer",
 	).andThen(() =>
 		ResultAsync.fromPromise(
 			(async () => {
-				const summarizer = await Summarizer.create(createOptions);
-				try {
-					return await summarizer.summarize(text, summarizeOptions);
-				} finally {
-					summarizer.destroy();
-				}
+				// Create and keep the session alive for reuse
+				const summarizer = await Summarizer.create(mergedOptions);
+
+				const instance: SafeSummarizerInstance = {
+					summarize: (text, summarizeOptions) =>
+						ResultAsync.fromPromise(
+							summarizer.summarize(text, summarizeOptions),
+							(error) =>
+								error instanceof Error
+									? error
+									: new Error(`Summarization failed: ${String(error)}`),
+						),
+					createSession: () =>
+						ResultAsync.fromPromise(
+							Summarizer.create(mergedOptions),
+							(error) =>
+								error instanceof Error
+									? error
+									: new Error(
+											`Failed to create Summarizer session: ${String(error)}`,
+										),
+						),
+					destroy: () => summarizer.destroy(),
+				};
+
+				return instance;
 			})(),
 			(error) =>
 				error instanceof Error
 					? error
-					: new Error(`Summarization failed: ${String(error)}`),
+					: new Error(`Failed to initialize Summarizer: ${String(error)}`),
 		),
 	);
 }

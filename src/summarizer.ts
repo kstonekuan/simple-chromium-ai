@@ -1,40 +1,36 @@
 /// <reference types="@types/dom-chromium-ai" />
 
 import * as Safe from "./summarizer-safe";
+import type { SummarizerInstance } from "./types";
 import { okOrThrow } from "./utils";
 
 /**
- * Checks availability of the Summarizer API.
- * @throws {Error} If availability check fails
+ * Initializes the Summarizer API by checking availability and triggering model download.
+ * Returns an instance object with `.summarize()` and `.createSession()` methods.
+ *
+ * @param createOptions Optional creation options (type, format, length, sharedContext)
+ * @returns A SummarizerInstance
+ * @throws {Error} If initialization fails
+ *
+ * @example
+ * const summarizer = await initSummarizer({ type: "tldr" });
+ * const summary = await summarizer.summarize("Long article...");
  */
-export async function availability(
-	options?: SummarizerCreateCoreOptions,
-): Promise<Availability> {
-	const result = await Safe.availability(options);
-	return okOrThrow(result);
-}
-
-/**
- * Creates a reusable Summarizer instance.
- * The caller is responsible for calling `.destroy()` when done.
- * @throws {Error} If creation fails
- */
-export async function create(
-	options?: SummarizerCreateOptions,
-): Promise<Summarizer> {
-	const result = await Safe.create(options);
-	return okOrThrow(result);
-}
-
-/**
- * One-shot summarize: creates a Summarizer, summarizes text, and destroys the instance.
- * @throws {Error} If summarization fails
- */
-export async function summarize(
-	text: string,
+export async function initSummarizer(
 	createOptions?: SummarizerCreateOptions,
-	summarizeOptions?: SummarizerSummarizeOptions,
-): Promise<string> {
-	const result = await Safe.summarize(text, createOptions, summarizeOptions);
-	return okOrThrow(result);
+): Promise<SummarizerInstance> {
+	const safeInstance = await Safe.initSummarizer(createOptions);
+	const safe = okOrThrow(safeInstance);
+
+	return {
+		summarize: async (text, summarizeOptions) => {
+			const result = await safe.summarize(text, summarizeOptions);
+			return okOrThrow(result);
+		},
+		createSession: async () => {
+			const result = await safe.createSession();
+			return okOrThrow(result);
+		},
+		destroy: () => safe.destroy(),
+	};
 }

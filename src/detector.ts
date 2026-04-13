@@ -1,40 +1,36 @@
 /// <reference types="@types/dom-chromium-ai" />
 
 import * as Safe from "./detector-safe";
+import type { DetectorInstance } from "./types";
 import { okOrThrow } from "./utils";
 
 /**
- * Checks availability of the Language Detector API.
- * @throws {Error} If availability check fails
+ * Initializes the Language Detector API by checking availability and triggering model download.
+ * Returns an instance object with `.detect()` and `.createSession()` methods.
+ *
+ * @param options Optional options with expected input languages
+ * @returns A DetectorInstance
+ * @throws {Error} If initialization fails
+ *
+ * @example
+ * const detector = await initDetector();
+ * const detections = await detector.detect("Bonjour le monde");
  */
-export async function availability(
-	options?: LanguageDetectorCreateCoreOptions,
-): Promise<Availability> {
-	const result = await Safe.availability(options);
-	return okOrThrow(result);
-}
-
-/**
- * Creates a reusable LanguageDetector instance.
- * The caller is responsible for calling `.destroy()` when done.
- * @throws {Error} If creation fails
- */
-export async function create(
+export async function initDetector(
 	options?: LanguageDetectorCreateOptions,
-): Promise<LanguageDetector> {
-	const result = await Safe.create(options);
-	return okOrThrow(result);
-}
+): Promise<DetectorInstance> {
+	const safeInstance = await Safe.initDetector(options);
+	const safe = okOrThrow(safeInstance);
 
-/**
- * One-shot detect: creates a LanguageDetector, detects language, and destroys the instance.
- * @throws {Error} If detection fails
- */
-export async function detect(
-	text: string,
-	options?: LanguageDetectorCreateCoreOptions,
-	signal?: AbortSignal,
-): Promise<LanguageDetectionResult[]> {
-	const result = await Safe.detect(text, options, signal);
-	return okOrThrow(result);
+	return {
+		detect: async (text, signal) => {
+			const result = await safe.detect(text, signal);
+			return okOrThrow(result);
+		},
+		createSession: async (createOptions) => {
+			const result = await safe.createSession(createOptions);
+			return okOrThrow(result);
+		},
+		destroy: () => safe.destroy(),
+	};
 }

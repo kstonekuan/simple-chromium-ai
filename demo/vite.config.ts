@@ -14,6 +14,10 @@ function copyStatic(): Plugin {
 				resolve(__dirname, "popup.html"),
 				resolve(__dirname, "dist/popup.html"),
 			);
+			copyFileSync(
+				resolve(__dirname, "background.js"),
+				resolve(__dirname, "dist/background.js"),
+			);
 		},
 	};
 }
