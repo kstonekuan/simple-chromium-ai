@@ -41,21 +41,13 @@ export function initSummarizer(
 	).andThen(() =>
 		ResultAsync.fromPromise(
 			(async () => {
-				// Trigger actual model download (pass monitor/signal for download progress)
+				// Create and keep the session alive for reuse
 				const summarizer = await Summarizer.create(mergedOptions);
-				summarizer.destroy();
 
 				const instance: SafeSummarizerInstance = {
 					summarize: (text, summarizeOptions) =>
 						ResultAsync.fromPromise(
-							(async () => {
-								const s = await Summarizer.create(mergedOptions);
-								try {
-									return await s.summarize(text, summarizeOptions);
-								} finally {
-									s.destroy();
-								}
-							})(),
+							summarizer.summarize(text, summarizeOptions),
 							(error) =>
 								error instanceof Error
 									? error
@@ -71,6 +63,7 @@ export function initSummarizer(
 											`Failed to create Summarizer session: ${String(error)}`,
 										),
 						),
+					destroy: () => summarizer.destroy(),
 				};
 
 				return instance;

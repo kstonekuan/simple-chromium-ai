@@ -36,24 +36,13 @@ export function initTranslator(
 	).andThen(() =>
 		ResultAsync.fromPromise(
 			(async () => {
-				// Trigger actual model download
+				// Create and keep the session alive for reuse
 				const translator = await Translator.create(options);
-				translator.destroy();
 
 				const instance: SafeTranslatorInstance = {
 					translate: (text, signal) =>
 						ResultAsync.fromPromise(
-							(async () => {
-								const t = await Translator.create(options);
-								try {
-									return await t.translate(
-										text,
-										signal ? { signal } : undefined,
-									);
-								} finally {
-									t.destroy();
-								}
-							})(),
+							translator.translate(text, signal ? { signal } : undefined),
 							(error) =>
 								error instanceof Error
 									? error
@@ -67,6 +56,7 @@ export function initTranslator(
 										`Failed to create Translator session: ${String(error)}`,
 									),
 						),
+					destroy: () => translator.destroy(),
 				};
 
 				return instance;

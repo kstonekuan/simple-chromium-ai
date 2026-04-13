@@ -59,28 +59,30 @@ export function initLanguageModel(
 						),
 					),
 				)
-				.with("downloadable", "downloading", "available", () => ok(undefined))
+				.with("downloadable", "downloading", "available", (a) => ok(a))
 				.exhaustive();
 
 			if (canProceed.isErr()) {
 				return canProceed;
 			}
 
-			// Trigger actual model download by creating and immediately destroying a session
-			try {
-				const session = await LanguageModel.create({
-					expectedInputs,
-					expectedOutputs,
-					monitor: options?.monitor,
-					signal: options?.signal,
-				});
-				session.destroy();
-			} catch (error) {
-				return err(
-					new Error(
-						`Failed to download LanguageModel: ${error instanceof Error ? error.message : String(error)}`,
-					),
-				);
+			// Only trigger download if the model isn't already local.
+			if (canProceed.value !== "available") {
+				try {
+					const session = await LanguageModel.create({
+						expectedInputs,
+						expectedOutputs,
+						monitor: options?.monitor,
+						signal: options?.signal,
+					});
+					session.destroy();
+				} catch (error) {
+					return err(
+						new Error(
+							`Failed to download LanguageModel: ${error instanceof Error ? error.message : String(error)}`,
+						),
+					);
+				}
 			}
 
 			const instance: SafeLanguageModelInstance = {

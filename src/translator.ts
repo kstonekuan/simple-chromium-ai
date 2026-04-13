@@ -32,5 +32,6 @@ export async function initTranslator(
 			const result = await safe.createSession();
 			return okOrThrow(result);
 		},
+		destroy: () => safe.destroy(),
 	};
 }

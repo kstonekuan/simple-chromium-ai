@@ -31,5 +31,6 @@ export async function initSummarizer(
 			const result = await safe.createSession();
 			return okOrThrow(result);
 		},
+		destroy: () => safe.destroy(),
 	};
 }

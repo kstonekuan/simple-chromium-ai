@@ -52,12 +52,60 @@ let translator: TranslatorInstance | null = null;
 let detector: DetectorInstance | null = null;
 let summarizer: SummarizerInstance | null = null;
 
-// Toggle visible section based on dropdown
+// Monitor callback to show download progress in status
+function createMonitor(label: string): CreateMonitorCallback {
+	return (monitor) => {
+		monitor.addEventListener("downloadprogress", (e) => {
+			const pct = e.total ? Math.round((e.loaded / e.total) * 100) : 0;
+			if (statusEl)
+				statusEl.textContent = `${label}: downloading model ${pct}%`;
+		});
+	};
+}
+
+// Lazy-init APIs on dropdown selection
+async function initForSelection(api: string) {
+	try {
+		switch (api) {
+			case "prompt":
+				if (!ai) {
+					if (statusEl) statusEl.textContent = "Initializing Prompt API...";
+					ai = await ChromiumAI.initLanguageModel({
+						monitor: createMonitor("Prompt API"),
+					});
+				}
+				if (statusEl) statusEl.textContent = "Prompt API ready!";
+				break;
+			case "detect":
+				if (!detector) {
+					if (statusEl)
+						statusEl.textContent = "Initializing Language Detector...";
+					detector = await ChromiumAI.initDetector({
+						monitor: createMonitor("Language Detector"),
+					});
+				}
+				if (statusEl) statusEl.textContent = "Language Detector ready!";
+				break;
+			case "translate":
+				await initTranslatorIfNeeded();
+				break;
+			case "summarize":
+				await initSummarizerIfNeeded();
+				break;
+		}
+	} catch (error) {
+		if (statusEl)
+			statusEl.textContent = `Error: ${error instanceof Error ? error.message : String(error)}`;
+	}
+}
+
+// Toggle visible section and lazy-init on dropdown change
 apiSelect?.addEventListener("change", () => {
 	for (const [key, el] of Object.entries(sections)) {
 		if (el) el.style.display = key === apiSelect.value ? "block" : "none";
 	}
 	if (responseEl) responseEl.textContent = "";
+	initForSelection(apiSelect.value);
 });
 
 // Track the language pair the translator was initialized with
@@ -68,87 +116,106 @@ let translatorTargetLang = "";
 let summarizerType = "";
 let summarizerLength = "";
 
-// Initialize APIs (except translator, which inits on first translate)
-async function init() {
-	if (statusEl) statusEl.textContent = "Initializing APIs...";
-
-	try {
-		const [aiResult, detectorResult] = await Promise.allSettled([
-			ChromiumAI.initLanguageModel(),
-			ChromiumAI.initDetector(),
-		]);
-
-		if (aiResult.status === "fulfilled") ai = aiResult.value;
-		if (detectorResult.status === "fulfilled") detector = detectorResult.value;
-
-		if (statusEl) statusEl.textContent = "Chrome AI is ready!";
-		if (interfaceEl) interfaceEl.style.display = "block";
-	} catch (error) {
-		if (statusEl)
-			statusEl.textContent = `Error: ${error instanceof Error ? error.message : String(error)}`;
+async function initTranslatorIfNeeded() {
+	if (
+		!translator ||
+		translatorSourceLang !== sourceLang.value ||
+		translatorTargetLang !== targetLang.value
+	) {
+		if (translator) translator.destroy();
+		if (statusEl) statusEl.textContent = "Initializing Translator...";
+		translatorSourceLang = sourceLang.value;
+		translatorTargetLang = targetLang.value;
+		translator = await ChromiumAI.initTranslator({
+			sourceLanguage: translatorSourceLang,
+			targetLanguage: translatorTargetLang,
+			monitor: createMonitor("Translator"),
+		});
 	}
+	if (statusEl) statusEl.textContent = "Translator ready!";
+}
+
+async function initSummarizerIfNeeded() {
+	if (
+		!summarizer ||
+		summarizerType !== summaryType.value ||
+		summarizerLength !== summaryLength.value
+	) {
+		if (summarizer) summarizer.destroy();
+		if (statusEl) statusEl.textContent = "Initializing Summarizer...";
+		summarizerType = summaryType.value;
+		summarizerLength = summaryLength.value;
+		summarizer = await ChromiumAI.initSummarizer({
+			type: summarizerType as "tldr" | "key-points" | "teaser" | "headline",
+			length: summarizerLength as "short" | "medium" | "long",
+			monitor: createMonitor("Summarizer"),
+		});
+	}
+	if (statusEl) statusEl.textContent = "Summarizer ready!";
+}
+
+// Re-init translator/summarizer reactively when config fields change
+for (const el of [sourceLang, targetLang]) {
+	el?.addEventListener("change", () => {
+		if (apiSelect.value === "translate") initTranslatorIfNeeded();
+	});
+}
+for (const el of [summaryType, summaryLength]) {
+	el?.addEventListener("change", () => {
+		if (apiSelect.value === "summarize") initSummarizerIfNeeded();
+	});
 }
 
 async function handlePrompt() {
 	const text = inputPrompt?.value.trim();
-	if (!text || !ai) return;
+	if (!text) return;
 
-	try {
-		const response = await ai.prompt(text, undefined, undefined, {
-			initialPrompts: [
-				{ role: "system", content: "You are a helpful assistant." },
-			],
+	if (!ai) {
+		if (statusEl) statusEl.textContent = "Initializing Prompt API...";
+		ai = await ChromiumAI.initLanguageModel({
+			monitor: createMonitor("Prompt API"),
 		});
-		if (responseEl) responseEl.textContent = response;
-	} catch (error) {
-		if (responseEl)
-			responseEl.textContent = `Error: ${error instanceof Error ? error.message : String(error)}`;
+		if (statusEl) statusEl.textContent = "Prompt API ready!";
 	}
+
+	const response = await ai.prompt(text, undefined, undefined, {
+		initialPrompts: [
+			{ role: "system", content: "You are a helpful assistant." },
+		],
+	});
+	if (responseEl) responseEl.textContent = response;
 }
 
 async function handleTranslate() {
 	const text = inputTranslate?.value.trim();
 	if (!text) return;
 
-	try {
-		// Re-init translator if language pair changed or not yet initialized
-		if (
-			!translator ||
-			translatorSourceLang !== sourceLang.value ||
-			translatorTargetLang !== targetLang.value
-		) {
-			translatorSourceLang = sourceLang.value;
-			translatorTargetLang = targetLang.value;
-			translator = await ChromiumAI.initTranslator({
-				sourceLanguage: translatorSourceLang,
-				targetLanguage: translatorTargetLang,
-			});
-		}
-		const translated = await translator.translate(text);
-		if (responseEl) responseEl.textContent = translated;
-	} catch (error) {
-		if (responseEl)
-			responseEl.textContent = `Error: ${error instanceof Error ? error.message : String(error)}`;
-	}
+	await initTranslatorIfNeeded();
+	if (!translator) return;
+	const translated = await translator.translate(text);
+	if (responseEl) responseEl.textContent = translated;
 }
 
 async function handleDetect() {
 	const text = inputDetect?.value.trim();
-	if (!text || !detector) return;
+	if (!text) return;
 
-	try {
-		const detections = await detector.detect(text);
-		if (responseEl) {
-			responseEl.textContent = detections
-				.map(
-					(d) =>
-						`${d.detectedLanguage}: ${((d.confidence ?? 0) * 100).toFixed(1)}%`,
-				)
-				.join("\n");
-		}
-	} catch (error) {
-		if (responseEl)
-			responseEl.textContent = `Error: ${error instanceof Error ? error.message : String(error)}`;
+	if (!detector) {
+		if (statusEl) statusEl.textContent = "Initializing Language Detector...";
+		detector = await ChromiumAI.initDetector({
+			monitor: createMonitor("Language Detector"),
+		});
+		if (statusEl) statusEl.textContent = "Language Detector ready!";
+	}
+
+	const detections = await detector.detect(text);
+	if (responseEl) {
+		responseEl.textContent = detections
+			.map(
+				(d) =>
+					`${d.detectedLanguage}: ${((d.confidence ?? 0) * 100).toFixed(1)}%`,
+			)
+			.join("\n");
 	}
 }
 
@@ -156,26 +223,10 @@ async function handleSummarize() {
 	const text = inputSummarize?.value.trim();
 	if (!text) return;
 
-	try {
-		// Re-init summarizer if type or length changed or not yet initialized
-		if (
-			!summarizer ||
-			summarizerType !== summaryType.value ||
-			summarizerLength !== summaryLength.value
-		) {
-			summarizerType = summaryType.value;
-			summarizerLength = summaryLength.value;
-			summarizer = await ChromiumAI.initSummarizer({
-				type: summarizerType as "tldr" | "key-points" | "teaser" | "headline",
-				length: summarizerLength as "short" | "medium" | "long",
-			});
-		}
-		const summary = await summarizer.summarize(text);
-		if (responseEl) responseEl.textContent = summary;
-	} catch (error) {
-		if (responseEl)
-			responseEl.textContent = `Error: ${error instanceof Error ? error.message : String(error)}`;
-	}
+	await initSummarizerIfNeeded();
+	if (!summarizer) return;
+	const summary = await summarizer.summarize(text);
+	if (responseEl) responseEl.textContent = summary;
 }
 
 // Handle submit
@@ -183,22 +234,32 @@ submitBtn?.addEventListener("click", async () => {
 	submitBtn.disabled = true;
 	if (responseEl) responseEl.textContent = "Processing...";
 
-	switch (apiSelect.value) {
-		case "prompt":
-			await handlePrompt();
-			break;
-		case "translate":
-			await handleTranslate();
-			break;
-		case "detect":
-			await handleDetect();
-			break;
-		case "summarize":
-			await handleSummarize();
-			break;
+	try {
+		switch (apiSelect.value) {
+			case "prompt":
+				await handlePrompt();
+				break;
+			case "translate":
+				await handleTranslate();
+				break;
+			case "detect":
+				await handleDetect();
+				break;
+			case "summarize":
+				await handleSummarize();
+				break;
+		}
+	} catch (error) {
+		if (responseEl)
+			responseEl.textContent = `Error: ${error instanceof Error ? error.message : String(error)}`;
 	}
 
 	submitBtn.disabled = false;
 });
 
-init();
+// Show interface immediately — init is lazy
+if (interfaceEl) interfaceEl.style.display = "block";
+if (statusEl) statusEl.textContent = "Select an API to get started";
+
+// Init for the default selection (prompt)
+initForSelection(apiSelect.value);

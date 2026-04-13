@@ -55,6 +55,7 @@ export interface LanguageModelInstance {
 export interface TranslatorInstance {
 	translate(text: string, signal?: AbortSignal): Promise<string>;
 	createSession(): Promise<Translator>;
+	destroy(): void;
 }
 
 /**
@@ -69,6 +70,7 @@ export interface DetectorInstance {
 	createSession(
 		options?: LanguageDetectorCreateOptions,
 	): Promise<LanguageDetector>;
+	destroy(): void;
 }
 
 /**
@@ -81,6 +83,7 @@ export interface SummarizerInstance {
 		summarizeOptions?: SummarizerSummarizeOptions,
 	): Promise<string>;
 	createSession(): Promise<Summarizer>;
+	destroy(): void;
 }
 
 /**
@@ -112,6 +115,7 @@ export interface SafeLanguageModelInstance {
 export interface SafeTranslatorInstance {
 	translate(text: string, signal?: AbortSignal): ResultAsync<string, Error>;
 	createSession(): ResultAsync<Translator, Error>;
+	destroy(): void;
 }
 
 /**
@@ -125,6 +129,7 @@ export interface SafeDetectorInstance {
 	createSession(
 		options?: LanguageDetectorCreateOptions,
 	): ResultAsync<LanguageDetector, Error>;
+	destroy(): void;
 }
 
 /**
@@ -136,6 +141,7 @@ export interface SafeSummarizerInstance {
 		summarizeOptions?: SummarizerSummarizeOptions,
 	): ResultAsync<string, Error>;
 	createSession(): ResultAsync<Summarizer, Error>;
+	destroy(): void;
 }
 
 export type PromptResult = ResultAsync<string, Error>;

@@ -35,21 +35,13 @@ export function initDetector(
 	).andThen(() =>
 		ResultAsync.fromPromise(
 			(async () => {
-				// Trigger actual model download
+				// Create and keep the session alive for reuse
 				const detector = await LanguageDetector.create(options);
-				detector.destroy();
 
 				const instance: SafeDetectorInstance = {
 					detect: (text, signal) =>
 						ResultAsync.fromPromise(
-							(async () => {
-								const d = await LanguageDetector.create(options);
-								try {
-									return await d.detect(text, signal ? { signal } : undefined);
-								} finally {
-									d.destroy();
-								}
-							})(),
+							detector.detect(text, signal ? { signal } : undefined),
 							(error) =>
 								error instanceof Error
 									? error
@@ -65,6 +57,7 @@ export function initDetector(
 											`Failed to create Language Detector session: ${String(error)}`,
 										),
 						),
+					destroy: () => detector.destroy(),
 				};
 
 				return instance;

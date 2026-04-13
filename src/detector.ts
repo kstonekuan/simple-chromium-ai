@@ -31,5 +31,6 @@ export async function initDetector(
 			const result = await safe.createSession(createOptions);
 			return okOrThrow(result);
 		},
+		destroy: () => safe.destroy(),
 	};
 }
