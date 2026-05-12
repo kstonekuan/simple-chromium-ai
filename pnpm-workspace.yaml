@@ -2,5 +2,7 @@ packages:
   - '.'
   - 'demo'
 
-onlyBuiltDependencies:
-  - esbuild
+minimumReleaseAge: 10080
+
+allowBuilds:
+  esbuild: true
